@@ -1,0 +1,54 @@
+name: Build and Run MPAS CI/CD
+
+on:
+    push:
+        branches:
+            - mpas_cicd
+    pull_request:
+        branches:
+            - mpas_cicd
+
+jobs:
+    build:
+        name: Build MPAS
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+                uses: actions/checkout@v3
+
+            - name: Set up Fortran compiler
+                uses: actions/setup-fortran@v1
+
+            - name: Install dependencies
+                run: |
+                    sudo apt-get update
+                    sudo apt-get install -y build-essential gfortran mpich
+
+            - name: Build MPAS
+                run: |
+                    cd src
+                    make clean
+                    make gfortran CORE=atmosphere
+
+    test:
+        name: Run Tests
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - name: Checkout code
+                uses: actions/checkout@v3
+
+            - name: Set up Fortran compiler
+                uses: actions/setup-fortran@v1
+
+            - name: Install dependencies
+                run: |
+                    sudo apt-get update
+                    sudo apt-get install -y build-essential gfortran mpich
+
+            - name: Run MPAS model
+                run: |
+                    cd src
+                    mpirun -np 4 ./atmosphere_model
