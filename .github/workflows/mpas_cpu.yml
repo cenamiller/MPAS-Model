@@ -26,6 +26,11 @@ jobs:
             run: |
               sudo apt-get update
               sudo apt-get install -y build-essential mpich
+          
+          - name: Download I/O libraries
+            run: |
+              mkdir sources
+              wget -P sources https://www2.mmm.ucar.edu/people/duda/files/mpas/sources/*
 
           - name: Build MPAS
             run: |
