@@ -29,8 +29,9 @@ jobs:
           
           - name: Download I/O libraries
             run: |
-              mkdir sources
-              wget -P sources https://www2.mmm.ucar.edu/people/duda/files/mpas/sources/*
+              mkdir -p sources
+              chmod +x src/tools/download_io_libraries.sh
+              ./download_io_libraries.sh
 
           - name: Build MPAS
             run: |
