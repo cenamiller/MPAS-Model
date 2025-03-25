@@ -1,4 +1,4 @@
-name: Build and Run MPAS CI/CD
+name: Setup Build and Run MPAS CI/CD
 
 on:
     push:
@@ -9,19 +9,44 @@ on:
             - mpas_cicd
 
 jobs:
-    build:
-        name: Build MPAS
+    setup:
+        name: Install MPAS Libraries
         runs-on: ubuntu-latest
 
         steps:
           - name: Checkout code
             uses: actions/checkout@v3
 
-          - name: Download I/O libraries
+          - name: Check MPI & Fortran
             run: |
-              mkdir -p sources
-              chmod +x src/tools/download_io_libraries.sh
-              ./src/tools/download_io_libraries.sh
+              sudo apt-get update
+              sudo apt-get install -y mpich
+              echo "MPI version:"
+              mpicc --version
+              echo "Fortran version:"
+              gfortran --version
+
+          - name: Install Zlib & HDF5
+            run: |
+              sudo apt-get install -y zlib1g-dev libhdf5-mpi-dev
+
+          - name: Set up NetCDF-C
+            run: |
+              sudo apt-get install -y libnetcdf-dev
+
+          - name: Set up NetCDF-Fortran
+            run: |
+              sudo apt-get install -y libnetcdff-dev
+
+          - name: Set up PIO
+            run: |
+              sudo apt-get install -y libpnetcdf-dev
+
+         # - name: Download I/O libraries
+         #   run: |
+         #     mkdir -p sources
+         #     chmod +x src/tools/download_io_libraries.sh
+         #     ./src/tools/download_io_libraries.sh
 
           - name: Set up Fortran compiler
             run: |
@@ -34,7 +59,10 @@ jobs:
               sudo apt-get install -y build-essential mpich
           
 
-
+    build:
+        name: Build MPAS
+        runs-on: ubuntu-latest
+        needs: setup
           - name: Build MPAS
             run: |
               cd src
