@@ -17,6 +17,12 @@ jobs:
           - name: Checkout code
             uses: actions/checkout@v3
 
+          - name: Download I/O libraries
+            run: |
+              mkdir -p sources
+              chmod +x src/tools/download_io_libraries.sh
+              ./src/tools/download_io_libraries.sh
+
           - name: Set up Fortran compiler
             run: |
               sudo apt-get update
@@ -27,11 +33,7 @@ jobs:
               sudo apt-get update
               sudo apt-get install -y build-essential mpich
           
-          - name: Download I/O libraries
-            run: |
-              mkdir -p sources
-              chmod +x src/tools/download_io_libraries.sh
-              ./src/tools/download_io_libraries.sh
+
 
           - name: Build MPAS
             run: |
