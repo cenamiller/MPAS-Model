@@ -16,6 +16,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        
+    # - name: Install Open MPI
+    #   run: |
+    #     sudo apt-get update
+    #     sudo apt-get install -y openmpi-bin libopenmpi-dev
+
+      - name: Install MPICH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mpich libmpich-dev
+          mpicc --version
 
       - name: Check MPI installation
         run: |
@@ -27,6 +38,11 @@ jobs:
         run: |
           echo "Fortran version:"
           gfortran --version
+
+      - name: Install CMake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake
 
 
       - name: Set environment variables
@@ -55,18 +71,18 @@ jobs:
       - name: Create source directory
         run: mkdir -p ${{ env.LIBSRC }}
 
-      - name: Install MPICH
-        run: |
-          wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/mpich-3.3.1.tar.gz
-          tar xzvf ${{ env.LIBSRC }}/mpich-3.3.1.tar.gz
-          cd mpich-3.3.1
-          ./configure --prefix=${{ env.LIBBASE }}
-          make -j 4
-          make install
-          export PATH=${{ env.LIBBASE }}/bin:$PATH
-          export LD_LIBRARY_PATH=${{ env.LIBBASE }}/lib:$LD_LIBRARY_PATH
-          cd ..
-          rm -rf mpich-3.3.1
+    # - name: Install MPICH
+    #   run: |
+    #     wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/mpich-3.3.1.tar.gz
+    #     tar xzvf ${{ env.LIBSRC }}/mpich-3.3.1.tar.gz
+    #     cd mpich-3.3.1
+    #     ./configure --prefix=${{ env.LIBBASE }}
+    #     make -j 4
+    #     make install
+    #     export PATH=${{ env.LIBBASE }}/bin:$PATH
+    #     export LD_LIBRARY_PATH=${{ env.LIBBASE }}/lib:$LD_LIBRARY_PATH
+    #     cd ..
+    #     rm -rf mpich-3.3.1
 
 
       - name: Install Zlib
@@ -132,7 +148,9 @@ jobs:
           export LIBS="-lnetcdf ${LIBS}"
           export FFLAGS="-g -fbacktrace -fallow-argument-mismatch"
           export FCFLAGS="-g -fbacktrace -fallow-argument-mismatch"
-          ./configure --prefix=${{ env.LIBBASE }} --enable-parallel-tests --disable-shared
+          export CPPFLAGS="-I${{ env.LIBBASE }}/include"
+          export LDFLAGS="-L${{ env.LIBBASE }}/lib"
+          ./configure --prefix=${{ env.LIBBASE }} --enable-parallel-tests --disable-shared || (echo "Configure failed. Printing config.log:" && cat config.log && exit 1)
           make -j 4
           make install
           cd ..
