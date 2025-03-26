@@ -199,3 +199,10 @@ jobs:
           export MPAS_EXTERNAL_INCLUDES="-I${{ env.LIBBASE }}/include"
           echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS" >> $GITHUB_ENV
           echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
+
+      - name: Build MPAS-A
+        run: |
+          cd $GITHUB_WORKSPACE
+          make clean
+          make gfortran CORE=atmosphere
+          
