@@ -1,12 +1,5 @@
 name: Setup Build and Run MPAS CI/CD
 
-on:
-    push:
-        branches:
-            - mpas_cicd
-    pull_request:
-        branches:
-            - mpas_cicd
 
 jobs:
     setup:
@@ -17,14 +10,19 @@ jobs:
           - name: Checkout code
             uses: actions/checkout@v3
 
-          - name: Check MPI & Fortran
+          - name: Check MPI installation
             run: |
-              sudo apt-get update
-              sudo apt-get install -y mpich
-              echo "MPI version:"
+              echo "Checking MPI version..."
               mpicc --version
+              mpirun --version
+          
+          - name: Check Fortran compiler
+            run: |
               echo "Fortran version:"
               gfortran --version
+        
+            
+    
 
           - name: Install Zlib & HDF5
             run: |
