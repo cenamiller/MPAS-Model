@@ -48,6 +48,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y curl
+    
+      - name: Install libcurl development package
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev
 
       - name: Set environment variables
         run: |
@@ -164,7 +169,7 @@ jobs:
         run: |
           git clone https://github.com/NCAR/ParallelIO
           cd ParallelIO
-          git checkout -b pio-2.4.4 pio2_4_4
+          git checkout -b pio-2.5.10 pio2_5_10
           export PIOSRC=`pwd`
           cd ..
           mkdir pio
