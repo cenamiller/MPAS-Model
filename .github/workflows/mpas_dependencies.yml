@@ -44,6 +44,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake
 
+      - name: Install curl
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl
 
       - name: Set environment variables
         run: |
@@ -167,7 +171,17 @@ jobs:
           cd pio
           export CC=${{ env.MPI_CC }}
           export FC=${{ env.MPI_FC }}
-          cmake -DNetCDF_C_PATH=${{ env.NETCDF }} -DNetCDF_Fortran_PATH=${{ env.NETCDF }} -DPnetCDF_PATH=${{ env.PNETCDF }} -DHDF5_PATH=${{ env.NETCDF }} -DCMAKE_INSTALL_PREFIX=${{ env.LIBBASE }} -DPIO_USE_MALLOC=ON -DCMAKE_VERBOSE_MAKEFILE=1 -DPIO_ENABLE_TIMING=OFF $PIOSRC
+          cmake -DNetCDF_C_PATH=${{ env.NETCDF }} \
+                -DNetCDF_Fortran_PATH=${{ env.NETCDF }} \
+                -DPnetCDF_PATH=${{ env.PNETCDF }} \
+                -DHDF5_PATH=${{ env.NETCDF }} \
+                -DCMAKE_INSTALL_PREFIX=${{ env.LIBBASE }} \
+                -DPIO_USE_MALLOC=ON \
+                -DCMAKE_VERBOSE_MAKEFILE=1 \
+                -DPIO_ENABLE_TIMING=OFF \
+                -DMPI_C_INCLUDE_PATH=/usr/include/mpich \
+                -DMPI_Fortran_INCLUDE_PATH=/usr/include/mpich \
+                $PIOSRC
           make
           make install
           cd ..
