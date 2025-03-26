@@ -48,7 +48,7 @@ jobs:
       - name: Set environment variables
         run: |
           export LIBSRC=/tmp/sources
-          export LIBBASE=/usr/local/mpas-libs
+          export LIBBASE=${GITHUB_WORKSPACE:-/tmp}/mpas-libs
           export SERIAL_FC=gfortran
           export SERIAL_F77=gfortran
           export SERIAL_CC=gcc
