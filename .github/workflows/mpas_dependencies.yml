@@ -17,6 +17,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Check MPI installation
+        run: |
+          echo "Checking MPI version..."
+          mpicc --version
+          mpirun --version
+
+      - name: Check Fortran compiler
+        run: |
+          echo "Fortran version:"
+          gfortran --version
+
+
       - name: Set environment variables
         run: |
           export LIBSRC=/tmp/sources
@@ -43,18 +55,6 @@ jobs:
       - name: Create source directory
         run: mkdir -p ${{ env.LIBSRC }}
 
-      - name: Install MPICH
-        run: |
-          wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/mpich-3.3.1.tar.gz
-          tar xzvf ${{ env.LIBSRC }}/mpich-3.3.1.tar.gz
-          cd mpich-3.3.1
-          ./configure --prefix=${{ env.LIBBASE }}
-          make -j 4
-          make install
-          export PATH=${{ env.LIBBASE }}/bin:$PATH
-          export LD_LIBRARY_PATH=${{ env.LIBBASE }}/lib:$LD_LIBRARY_PATH
-          cd ..
-          rm -rf mpich-3.3.1
 
       - name: Install Zlib
         run: |
@@ -117,6 +117,8 @@ jobs:
           export FC=${{ env.MPI_FC }}
           export F77=${{ env.MPI_F77 }}
           export LIBS="-lnetcdf ${LIBS}"
+          export FFLAGS="-g -fbacktrace -fallow-argument-mismatch"
+          export FCFLAGS="-g -fbacktrace -fallow-argument-mismatch"
           ./configure --prefix=${{ env.LIBBASE }} --enable-parallel-tests --disable-shared
           make -j 4
           make install
