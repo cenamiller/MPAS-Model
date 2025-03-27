@@ -189,6 +189,8 @@ jobs:
       - name: Archive libraries and environment
         run: |
           tar -czf mpas-libs.tar.gz mpas-libs
+
+      - name: Upload MPAS libraries
         uses: actions/upload-artifact@v3
         with:
           name: mpas-libs
