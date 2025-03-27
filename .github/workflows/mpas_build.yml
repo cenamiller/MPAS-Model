@@ -9,7 +9,7 @@ on:
         - mpas_cicd
 
 jobs:
-  build:
+  build-on-libs:
     name: Build MPAS-A
     runs-on: ubuntu-latest
 
@@ -64,3 +64,4 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           make gfortran CORE=atmosphere
+
