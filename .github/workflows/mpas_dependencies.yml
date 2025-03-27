@@ -202,12 +202,6 @@ jobs:
       - name: Create tarball of LIBBASE
         run: |
           tar -czf mpas-libs.tar.gz -C ${{ env.LIBBASE }} .
-  
-      - name: Upload LIBBASE as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: mpas-libs
-          path: mpas-libs.tar.gz
 
       - name: Build MPAS-A
         run: |
