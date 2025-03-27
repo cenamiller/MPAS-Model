@@ -209,6 +209,36 @@ jobs:
           name: mpas-libs
           path: mpas-libs.tar.gz
 
+  build:
+    name: Build MPAS-A
+    runs-on: ubuntu-latest
+    needs: setup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download LIBBASE artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mpas-libs
+
+      - name: Extract LIBBASE
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/mpas-libs
+          tar -xzf mpas-libs.tar.gz -C $GITHUB_WORKSPACE/mpas-libs
+
+      - name: Set environment variables
+        run: |
+          export LIBBASE=$GITHUB_WORKSPACE/mpas-libs
+          export MPAS_EXTERNAL_LIBS="-L${LIBBASE}/lib -lhdf5_hl -lhdf5 -ldl -lz -lpnetcdf"
+          export MPAS_EXTERNAL_INCLUDES="-I${LIBBASE}/include"
+          export PNETCDF=${LIBBASE}
+          echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS" >> $GITHUB_ENV
+          echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
+          echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
+        
+
       - name: Build MPAS-A
         run: |
           cd $GITHUB_WORKSPACE
