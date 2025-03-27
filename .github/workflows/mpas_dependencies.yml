@@ -228,9 +228,35 @@ jobs:
           mkdir -p $GITHUB_WORKSPACE/mpas-libs
           tar -xzf mpas-libs.tar.gz -C $GITHUB_WORKSPACE/mpas-libs
 
+      - name: Install MPICH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mpich libmpich-dev
+          mpicc --version
+
       - name: Set environment variables
         run: |
-          export LIBBASE=$GITHUB_WORKSPACE/mpas-libs
+          export LIBBASE=${GITHUB_WORKSPACE:-/tmp}/mpas-libs
+          
+          export SERIAL_FC=gfortran
+          export SERIAL_F77=gfortran
+          export SERIAL_CC=gcc
+          export SERIAL_CXX=g++
+          export MPI_FC=mpifort
+          export MPI_F77=mpifort
+          export MPI_CC=mpicc
+          export MPI_CXX=mpic++
+          echo "LIBSRC=$LIBSRC" >> $GITHUB_ENV
+          echo "LIBBASE=$LIBBASE" >> $GITHUB_ENV
+          echo "SERIAL_FC=$SERIAL_FC" >> $GITHUB_ENV
+          echo "SERIAL_F77=$SERIAL_F77" >> $GITHUB_ENV
+          echo "SERIAL_CC=$SERIAL_CC" >> $GITHUB_ENV
+          echo "SERIAL_CXX=$SERIAL_CXX" >> $GITHUB_ENV
+          echo "MPI_FC=$MPI_FC" >> $GITHUB_ENV
+          echo "MPI_F77=$MPI_F77" >> $GITHUB_ENV
+          echo "MPI_CC=$MPI_CC" >> $GITHUB_ENV
+          echo "MPI_CXX=$MPI_CXX" >> $GITHUB_ENV
+   
           export MPAS_EXTERNAL_LIBS="-L${LIBBASE}/lib -lhdf5_hl -lhdf5 -ldl -lz -lpnetcdf"
           export MPAS_EXTERNAL_INCLUDES="-I${LIBBASE}/include"
           export PNETCDF=${LIBBASE}
