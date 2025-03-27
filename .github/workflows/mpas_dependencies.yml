@@ -108,6 +108,8 @@ jobs:
       - name: Install HDF5
         run: |
           wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/hdf5-1.10.5.tar.bz2
+          #bzip2 needed to extract hdf5
+          #apt-get install -y bzip2
           tar xjvf ${{ env.LIBSRC }}/hdf5-1.10.5.tar.bz2
           cd hdf5-1.10.5
           export FC=${{ env.MPI_FC }}
@@ -203,6 +205,4 @@ jobs:
       - name: Build MPAS-A
         run: |
           cd $GITHUB_WORKSPACE
-          make clean
           make gfortran CORE=atmosphere
-          
