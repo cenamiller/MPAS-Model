@@ -1,4 +1,4 @@
-name: Install MPAS Dependencies
+name: Build MPAS-A
 
 on:
     push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   setup:
-    name: Install MPAS Libraries
+    name: Install MPAS Libraries 
     runs-on: ubuntu-latest
 
     steps:
@@ -74,19 +74,6 @@ jobs:
 
       - name: Create source directory
         run: mkdir -p ${{ env.LIBSRC }}
-
-    # - name: Install MPICH
-    #   run: |
-    #     wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/mpich-3.3.1.tar.gz
-    #     tar xzvf ${{ env.LIBSRC }}/mpich-3.3.1.tar.gz
-    #     cd mpich-3.3.1
-    #     ./configure --prefix=${{ env.LIBBASE }}
-    #     make -j 4
-    #     make install
-    #     export PATH=${{ env.LIBBASE }}/bin:$PATH
-    #     export LD_LIBRARY_PATH=${{ env.LIBBASE }}/lib:$LD_LIBRARY_PATH
-    #     cd ..
-    #     rm -rf mpich-3.3.1
 
 
       - name: Install Zlib
@@ -198,6 +185,40 @@ jobs:
           echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS" >> $GITHUB_ENV
           echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
           echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
+
+      - name: Archive libraries and environment
+        run: |
+          tar -czf mpas-libs.tar.gz mpas-libs
+        uses: actions/upload-artifact@v3
+        with:
+          name: mpas-libs
+          path: mpas-libs.tar.gz
+
+  build:
+    name: Build MPAS-A
+    runs-on: ubuntu-latest
+    needs: setup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+    
+      - name: Download MPAS libraries & environment
+        uses: actions/download-artifact@v3
+        with:
+          name: mpas-libs
+        
+      - name: Extract MPAS libraries
+        run: |
+          tar -xzf mpas-libs.tar.gz
+          export LIBBASE=${GITHUB_WORKSPACE}/mpas-libs
+          export MPAS_EXTERNAL_LIBS="-L${LIBBASE}/lib -lhdf5_hl -lhdf5 -ldl -lz -lpnetcdf"
+          export MPAS_EXTERNAL_INCLUDES="-I${LIBBASE}/include"
+          export PNETCDF=${LIBBASE}
+          echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS" >> $GITHUB_ENV
+          echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
+          echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
+
 
       - name: Build MPAS-A
         run: |
