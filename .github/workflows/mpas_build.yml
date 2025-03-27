@@ -1,0 +1,65 @@
+name: Build MPAS-A
+
+on:
+    push:
+      branches:
+        - mpas_cicd
+    pull_request:
+      branches:
+        - mpas_cicd
+
+jobs:
+  build:
+    name: Build MPAS-A
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Extract LIBBASE from mpas-libs.zip
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/mpas-libs
+          unzip .github/workflows/mpas-libs.zip -d $GITHUB_WORKSPACE/mpas-libs
+
+      - name: Install MPICH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mpich libmpich-dev
+          mpicc --version
+
+      - name: Set environment variables
+        run: |
+          export LIBBASE=${GITHUB_WORKSPACE:-/tmp}/mpas-libs
+
+          export SERIAL_FC=gfortran
+          export SERIAL_F77=gfortran
+          export SERIAL_CC=gcc
+          export SERIAL_CXX=g++
+          export MPI_FC=mpifort
+          export MPI_F77=mpifort
+          export MPI_CC=mpicc
+          export MPI_CXX=mpic++
+          echo "LIBSRC=$LIBSRC" >> $GITHUB_ENV
+          echo "LIBBASE=$LIBBASE" >> $GITHUB_ENV
+          echo "SERIAL_FC=$SERIAL_FC" >> $GITHUB_ENV
+          echo "SERIAL_F77=$SERIAL_F77" >> $GITHUB_ENV
+          echo "SERIAL_CC=$SERIAL_CC" >> $GITHUB_ENV
+          echo "SERIAL_CXX=$SERIAL_CXX" >> $GITHUB_ENV
+          echo "MPI_FC=$MPI_FC" >> $GITHUB_ENV
+          echo "MPI_F77=$MPI_F77" >> $GITHUB_ENV
+          echo "MPI_CC=$MPI_CC" >> $GITHUB_ENV
+          echo "MPI_CXX=$MPI_CXX" >> $GITHUB_ENV
+   
+          export MPAS_EXTERNAL_LIBS="-L${LIBBASE}/lib -lhdf5_hl -lhdf5 -ldl -lz -lpnetcdf"
+          export MPAS_EXTERNAL_INCLUDES="-I${LIBBASE}/include"
+          export PNETCDF=${LIBBASE}
+          echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS" >> $GITHUB_ENV
+          echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
+          echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
+        
+
+      - name: Build MPAS-A
+        run: |
+          cd $GITHUB_WORKSPACE
+          make gfortran CORE=atmosphere

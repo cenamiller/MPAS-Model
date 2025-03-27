@@ -1,12 +1,14 @@
 name: Install MPAS Dependencies
 
 on:
-    push:
-        branches:
-            - mpas_cicd
-    pull_request:
-        branches:
-            - mpas_cicd
+  workflow_dispatch:
+    
+    # push:
+    #     branches:
+    #         - mpas_cicd
+    # pull_request:
+    #     branches:
+    #         - mpas_cicd
 
 jobs:
   setup:
