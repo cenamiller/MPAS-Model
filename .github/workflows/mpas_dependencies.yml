@@ -208,6 +208,7 @@ jobs:
         with:
           name: mpas-libs
           path: mpas-libs.tar.gz
+          compression-level: 9
 
   build:
     name: Build MPAS-A
@@ -237,7 +238,7 @@ jobs:
       - name: Set environment variables
         run: |
           export LIBBASE=${GITHUB_WORKSPACE:-/tmp}/mpas-libs
-          
+
           export SERIAL_FC=gfortran
           export SERIAL_F77=gfortran
           export SERIAL_CC=gcc
