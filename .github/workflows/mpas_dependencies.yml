@@ -203,6 +203,12 @@ jobs:
         run: |
           tar -czf mpas-libs.tar.gz -C ${{ env.LIBBASE }} .
 
+      - name: Upload LIBBASE as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpas-libs
+          path: mpas-libs.tar.gz
+
       - name: Build MPAS-A
         run: |
           cd $GITHUB_WORKSPACE
