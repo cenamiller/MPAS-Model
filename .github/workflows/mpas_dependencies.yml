@@ -16,11 +16,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
-    # - name: Install Open MPI
-    #   run: |
-    #     sudo apt-get update
-    #     sudo apt-get install -y openmpi-bin libopenmpi-dev
 
       - name: Install MPICH
         run: |
@@ -197,10 +192,12 @@ jobs:
 
       - name: Set MPAS environment variables
         run: |
-          export MPAS_EXTERNAL_LIBS="-L${{ env.LIBBASE }}/lib -lhdf5_hl -lhdf5 -ldl -lz"
+          export MPAS_EXTERNAL_LIBS="-L${{ env.LIBBASE }}/lib -lhdf5_hl -lhdf5 -ldl -lz -lpnetcdf"
           export MPAS_EXTERNAL_INCLUDES="-I${{ env.LIBBASE }}/include"
+          export PNETCDF=${{ env.LIBBASE }}
           echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS" >> $GITHUB_ENV
           echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
+          echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
 
       - name: Build MPAS-A
         run: |
