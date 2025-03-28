@@ -60,8 +60,18 @@ jobs:
           echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
         
 
-      - name: Build MPAS-A
+      - name: Build MPAS-A CORE=init_atmosphere
+        run: |
+          cd $GITHUB_WORKSPACE
+          make gfortran CORE=init_atmosphere
+
+      - name: Build MPAS-A CORE=atmosphere
         run: |
           cd $GITHUB_WORKSPACE
           make gfortran CORE=atmosphere
+
+      - name: Extract supercell.tar.gz
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/supercell
+          tar -xzf .github/workflows/supercell.tar.gz -C $GITHUB_WORKSPACE
 
