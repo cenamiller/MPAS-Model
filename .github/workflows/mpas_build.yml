@@ -90,16 +90,24 @@ jobs:
         run: |
           cd ${WORKSPACE}/supercell
           mpirun -np 4 ./init_atmosphere_model
-          echo "INIT_ATMOSPHERE_OUTPUT=$(cat log.init_atmosphere.0000.out)" >> $GITHUB_ENV
-          echo "INIT_ATMOSPHERE_OUTPUT=$(cat log.init_atmosphere.0000.out)" 
+
+      - name: Upload init_atmosphere output
+        uses: actions/upload-artifact@v4
+        with:
+          name: log.init_atmosphere.0000.out
+          path: ${WORKSPACE}/supercell/log.init_atmosphere.0000.out
 
 
       - name: Run atmosphere
         run: |
           cd ${WORKSPACE}/supercell
-          mpirun -np 4 ./atmosphere_model | tee log.atmosphere.0000.out
-          echo "ATMOSPHERE_OUTPUT=$(cat log.atmosphere.0000.out)" >> $GITHUB_ENV
-          echo "ATMOSPHERE_OUTPUT=$(cat log.atmosphere.0000.out)"
+          mpirun -np 4 ./atmosphere_model 
+
+      - name: Upload atmosphere output
+        uses: actions/upload-artifact@v4
+        with:
+          name: log.atmosphere.0000.out
+          path: ${WORKSPACE}/supercell/log.atmosphere.0000.out
 
 
 
