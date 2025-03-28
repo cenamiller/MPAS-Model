@@ -75,19 +75,19 @@ jobs:
           mkdir -p ${GITHUB_WORKSPACE:-$(pwd)}/supercell
           tar -xzf .github/workflows/supercell.tar.gz -C ${GITHUB_WORKSPACE:-$(pwd)}/supercell
           cd ${GITHUB_WORKSPACE:-$(pwd)}/supercell
-          ln -sf ../init_atmosphere .
-          ln -sf ../atmosphere .
+          ln -sf ../init_atmosphere_model .
+          ln -sf ../atmosphere_model .
 
       - name: Run init_atmosphere to create supercell initial conditions
         run: |
           cd ${GITHUB_WORKSPACE:-$(pwd)}/supercell
-          mpirun -np 4 ./init_atmosphere
+          mpirun -np 4 ./init_atmosphere_model
 
       - name: Run atmosphere
         run: |
           cd ${GITHUB_WORKSPACE:-$(pwd)}/supercell
-          mpirun -np 4 ./atmosphere
-          
+          mpirun -np 4 ./atmosphere_model
+
 
 
 
