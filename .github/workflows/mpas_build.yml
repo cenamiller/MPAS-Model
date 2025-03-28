@@ -17,11 +17,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Extract LIBBASE from mpas-libs.zip
+      - name: Set WORKSPACE variable
         run: |
-          mkdir -p ${GITHUB_WORKSPACE:-$(pwd)}/mpas-libs
-          unzip .github/workflows/mpas-libs.zip -d ${GITHUB_WORKSPACE:-$(pwd)}/mpas-libs
-          tar -xzf ${GITHUB_WORKSPACE:-$(pwd)}/mpas-libs/mpas-libs.tar.gz -C ${GITHUB_WORKSPACE:-$(pwd)}/mpas-libs
+          export WORKSPACE=${GITHUB_WORKSPACE:-$(pwd)}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "WORKSPACE=$WORKSPACE"
 
       - name: Install MPICH
         run: |
@@ -29,10 +29,19 @@ jobs:
           sudo apt-get install -y mpich libmpich-dev
           mpicc --version
 
+      - name: Extract LIBBASE from mpas-libs.zip
+        run: |
+          cd ${WORKSPACE}
+          export LIBBASE=${WORKSPACE}/mpas-libs
+          mkdir -p ${LIBBASE}
+          unzip .github/workflows/mpas-libs.zip -d ${WORKSPACE}
+          tar -xzf mpas-libs.tar.gz -C ${LIBBASE}
+          rm -f mpas-libs.tar.gz
+          echo "LIBBASE=${LIBBASE}" >> $GITHUB_ENV
+          echo "LIBBASE=${LIBBASE}"
+
       - name: Set environment variables
         run: |
-          export LIBBASE=${GITHUB_WORKSPACE:-/tmp}/mpas-libs
-
           export SERIAL_FC=gfortran
           export SERIAL_F77=gfortran
           export SERIAL_CC=gcc
@@ -62,31 +71,31 @@ jobs:
 
       - name: Build MPAS-A CORE=init_atmosphere
         run: |
-          cd $GITHUB_WORKSPACE
+          cd $WORKSPACE
           make gfortran CORE=init_atmosphere
 
       - name: Build MPAS-A CORE=atmosphere
         run: |
-          cd $GITHUB_WORKSPACE
+          cd $WORKSPACE
           make gfortran CORE=atmosphere
 
       - name: Extract supercell.tar.gz & link init_atmosphere & atmosphere
         run: |
-          mkdir -p ${GITHUB_WORKSPACE:-$(pwd)}/supercell
-          tar -xzf .github/workflows/supercell.tar.gz -C ${GITHUB_WORKSPACE:-$(pwd)}/supercell
-          cd ${GITHUB_WORKSPACE:-$(pwd)}/supercell
+          tar -xzf .github/workflows/supercell.tar.gz -C ${WORKSPACE}
+          cd ${WORKSPACE}/supercell
           ln -sf ../init_atmosphere_model .
           ln -sf ../atmosphere_model .
 
       - name: Run init_atmosphere to create supercell initial conditions
         run: |
-          cd ${GITHUB_WORKSPACE:-$(pwd)}/supercell
-          mpirun -np 4 ./init_atmosphere_model
+          cd ${WORKSPACE}/supercell
+          mpirun -np 4 ./init_atmosphere_model | tee log.init_atmosphere.0000.out
+
 
       - name: Run atmosphere
         run: |
-          cd ${GITHUB_WORKSPACE:-$(pwd)}/supercell
-          mpirun -np 4 ./atmosphere_model
+          cd ${WORKSPACE}/supercell
+          mpirun -np 4 ./atmosphere_model | tee log.atmosphere.0000.out
 
 
 
