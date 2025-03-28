@@ -19,9 +19,9 @@ jobs:
 
       - name: Extract LIBBASE from mpas-libs.zip
         run: |
-          mkdir -p $GITHUB_WORKSPACE/mpas-libs
-          unzip .github/workflows/mpas-libs.zip -d $GITHUB_WORKSPACE/mpas-libs
-          tar -xzf $GITHUB_WORKSPACE/mpas-libs/mpas-libs.tar.gz -C $GITHUB_WORKSPACE/mpas-libs
+          mkdir -p ${GITHUB_WORKSPACE:-$(pwd)}/mpas-libs
+          unzip .github/workflows/mpas-libs.zip -d ${GITHUB_WORKSPACE:-$(pwd)}/mpas-libs
+          tar -xzf ${GITHUB_WORKSPACE:-$(pwd)}/mpas-libs/mpas-libs.tar.gz -C ${GITHUB_WORKSPACE:-$(pwd)}/mpas-libs
 
       - name: Install MPICH
         run: |
@@ -70,8 +70,24 @@ jobs:
           cd $GITHUB_WORKSPACE
           make gfortran CORE=atmosphere
 
-      - name: Extract supercell.tar.gz
+      - name: Extract supercell.tar.gz & link init_atmosphere & atmosphere
         run: |
-          mkdir -p $GITHUB_WORKSPACE/supercell
-          tar -xzf .github/workflows/supercell.tar.gz -C $GITHUB_WORKSPACE
+          mkdir -p ${GITHUB_WORKSPACE:-$(pwd)}/supercell
+          tar -xzf .github/workflows/supercell.tar.gz -C ${GITHUB_WORKSPACE:-$(pwd)}/supercell
+          cd ${GITHUB_WORKSPACE:-$(pwd)}/supercell
+          ln -sf ../init_atmosphere .
+          ln -sf ../atmosphere .
+
+      - name: Run init_atmosphere to create supercell initial conditions
+        run: |
+          cd ${GITHUB_WORKSPACE:-$(pwd)}/supercell
+          mpirun -np 4 ./init_atmosphere
+
+      - name: Run atmosphere
+        run: |
+          cd ${GITHUB_WORKSPACE:-$(pwd)}/supercell
+          mpirun -np 4 ./atmosphere
+          
+
+
 
