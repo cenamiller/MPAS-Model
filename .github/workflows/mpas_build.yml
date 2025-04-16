@@ -9,6 +9,21 @@ on:
         - mpas_cicd
 
 jobs:
+  lint:
+    name: Lint Fortran Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install fprettify
+        run: |
+          pip install fprettify
+
+      - name: Run fprettify
+        run: |
+          find . -name "*.F90" -o -name "*.f90" | xargs fprettify --check
+
   build-on-libs:
     name: Build MPAS-A
     runs-on: ubuntu-latest
@@ -95,8 +110,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: log.init_atmosphere.0000.out
-          path: ${WORKSPACE}/supercell/log.init_atmosphere.0000.out
-
+          path: supercell/log.init_atmosphere.0000.out
 
       - name: Run atmosphere
         run: |
@@ -107,7 +121,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: log.atmosphere.0000.out
-          path: ${WORKSPACE}/supercell/log.atmosphere.0000.out
+          path: supercell/log.atmosphere.0000.out
 
 
 
