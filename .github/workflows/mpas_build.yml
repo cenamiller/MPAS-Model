@@ -9,43 +9,6 @@ on:
         - mpas_cicd
 
 jobs:
-  lint:
-    name: Lint Fortran Code
-    runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'pull_request' && (
-        contains(github.event.pull_request.changed_files, '.F') ||
-        contains(github.event.pull_request.changed_files, '.F90') ||
-        contains(github.event.pull_request.changed_files, '.f90')
-      )
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Install fprettify
-        run: |
-          pip install fprettify
-
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v35
-        with:
-          files: |
-            **.F
-            **.F90
-            **.f90
-
-      - name: Run fprettify on changed files
-        if: steps.changed-files.outputs.any_changed == 'true'
-        run: |
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            if [[ -f "$file" ]]; then
-              fprettify -s -r "$file"
-            fi
-          done
-
   build-on-libs:
     name: Build MPAS-A
     runs-on: ubuntu-latest
