@@ -1,0 +1,37 @@
+name: Lint MPAS-A
+
+on:
+    push:
+      branches:
+        - mpas_cicd
+        - master
+        - develop
+    pull_request:
+      branches:
+        - mpas_cicd
+        - master
+        - develop
+
+jobs:
+  lint:
+    name: Lint Fortran Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install fprettify
+        run: |
+          pip install fprettify
+
+      - name: Find and check Fortran files
+        run: |
+          echo "Checking Fortran files for formatting issues..."
+          echo "Files needing formatting:"
+          find . -type f \( -name "*.F" -o -name "*.F90" -o -name "*.f90" \) | while read file; do
+            if ! fprettify -c "$file" > /dev/null 2>&1; then
+              echo "Formatting issues found in: $file"
+            fi
+          done

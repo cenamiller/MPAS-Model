@@ -1,0 +1,113 @@
+name: Build MPAS-A
+
+on:
+    push:
+      branches:
+        - mpas_cicd
+    pull_request:
+      branches:
+        - mpas_cicd
+
+jobs:
+  build-on-libs:
+    name: Build MPAS-A
+    runs-on: ubuntu-latest
+    #needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set WORKSPACE variable
+        run: |
+          export WORKSPACE=${GITHUB_WORKSPACE:-$(pwd)}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "WORKSPACE=$WORKSPACE"
+
+      - name: Install MPICH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mpich libmpich-dev
+          mpicc --version
+
+      - name: Extract LIBBASE from mpas-libs.zip
+        run: |
+          cd ${WORKSPACE}
+          export LIBBASE=${WORKSPACE}/mpas-libs
+          mkdir -p ${LIBBASE}
+          unzip .github/workflows/mpas-libs.zip -d ${WORKSPACE}
+          tar -xzf mpas-libs.tar.gz -C ${LIBBASE}
+          rm -f mpas-libs.tar.gz
+          echo "LIBBASE=${LIBBASE}" >> $GITHUB_ENV
+          echo "LIBBASE=${LIBBASE}"
+
+      - name: Set environment variables
+        run: |
+          export SERIAL_FC=gfortran
+          export SERIAL_F77=gfortran
+          export SERIAL_CC=gcc
+          export SERIAL_CXX=g++
+          export MPI_FC=mpifort
+          export MPI_F77=mpifort
+          export MPI_CC=mpicc
+          export MPI_CXX=mpic++
+          echo "LIBSRC=$LIBSRC" >> $GITHUB_ENV
+          echo "LIBBASE=$LIBBASE" >> $GITHUB_ENV
+          echo "SERIAL_FC=$SERIAL_FC" >> $GITHUB_ENV
+          echo "SERIAL_F77=$SERIAL_F77" >> $GITHUB_ENV
+          echo "SERIAL_CC=$SERIAL_CC" >> $GITHUB_ENV
+          echo "SERIAL_CXX=$SERIAL_CXX" >> $GITHUB_ENV
+          echo "MPI_FC=$MPI_FC" >> $GITHUB_ENV
+          echo "MPI_F77=$MPI_F77" >> $GITHUB_ENV
+          echo "MPI_CC=$MPI_CC" >> $GITHUB_ENV
+          echo "MPI_CXX=$MPI_CXX" >> $GITHUB_ENV
+   
+          export MPAS_EXTERNAL_LIBS="-L${LIBBASE}/lib -lhdf5_hl -lhdf5 -ldl -lz -lpnetcdf"
+          export MPAS_EXTERNAL_INCLUDES="-I${LIBBASE}/include"
+          export PNETCDF=${LIBBASE}
+          echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS" >> $GITHUB_ENV
+          echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
+          echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
+        
+
+      - name: Build MPAS-A CORE=init_atmosphere
+        run: |
+          cd $WORKSPACE
+          make gfortran CORE=init_atmosphere
+
+      - name: Build MPAS-A CORE=atmosphere
+        run: |
+          cd $WORKSPACE
+          make gfortran CORE=atmosphere
+
+      - name: Extract supercell.tar.gz & link init_atmosphere & atmosphere
+        run: |
+          tar -xzf .github/workflows/supercell.tar.gz -C ${WORKSPACE}
+          cd ${WORKSPACE}/supercell
+          ln -sf ../init_atmosphere_model .
+          ln -sf ../atmosphere_model .
+
+      - name: Run init_atmosphere to create supercell initial conditions
+        run: |
+          cd ${WORKSPACE}/supercell
+          mpirun -np 4 ./init_atmosphere_model 2>&1 | tee log.init_atmosphere.0000.out
+
+      - name: Upload init_atmosphere output
+        uses: actions/upload-artifact@v4
+        with:
+          name: log.init_atmosphere.0000.out
+          path: supercell/log.init_atmosphere.0000.out
+
+      - name: Run atmosphere
+        run: |
+          cd ${WORKSPACE}/supercell
+          mpirun -np 4 ./atmosphere_model 2>&1 | tee log.atmosphere.0000.out
+
+      - name: Upload atmosphere output
+        uses: actions/upload-artifact@v4
+        with:
+          name: log.atmosphere.0000.out
+          path: supercell/log.atmosphere.0000.out
+
+
+
+
