@@ -24,12 +24,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install MPICH
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mpich libmpich-dev
-          mpicc --version
-
       - name: Check MPI installation
         run: |
           echo "Checking MPI version..."
@@ -43,27 +37,43 @@ jobs:
 
       - name: Install CMake
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake
+          apt-get update
+          apt-get install -y cmake
 
       - name: Install curl
         run: |
-          sudo apt-get update
-          sudo apt-get install -y curl
+          apt-get update
+          apt-get install -y curl
     
       - name: Install libcurl development package
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev
+          apt-get update
+          apt-get install -y libcurl4-openssl-dev
+
+      - name: Debug NVIDIA HPC SDK paths
+        run: |
+          echo "Listing /opt/nvidia/hpc_sdk contents:"
+          ls -la /opt/nvidia/hpc_sdk/
+          echo "Listing Linux_x86_64 contents (if exists):"
+          ls -la /opt/nvidia/hpc_sdk/Linux_x86_64/ || echo "Directory not found"
+          echo "Looking for nvhpc-vars.sh:"
+          find /opt/nvidia/hpc_sdk -name "nvhpc-vars.sh" || echo "File not found"
+          echo "Looking for environment setup files:"
+          find /opt/nvidia/hpc_sdk -type f -name "*vars.sh"
+          echo "Full directory tree of hpc_sdk:"
+          tree /opt/nvidia/hpc_sdk || (find /opt/nvidia/hpc_sdk -type d)
 
       - name: Set environment variables
+        shell: bash
         run: |
-          # Initialize NVIDIA HPC SDK environment
-          source /opt/nvidia/hpc_sdk/Linux_x86_64/23.11/comm_libs/hpcx/latest/hpcx-init.sh
-          source /opt/nvidia/hpc_sdk/Linux_x86_64/23.11/compilers/bin/nvhpc-vars.sh
+          # Load NVIDIA HPC SDK module
+          apt-get update && apt-get install -y environment-modules
+          . /etc/profile.d/modules.sh
+          module use /opt/nvidia/hpc_sdk/modulefiles
+          module load nvhpc-hpcx-cuda12
           
           export LIBSRC=/tmp/sources
-          export LIBBASE=${GITHUB_WORKSPACE:-/tmp}/mpas-libs
+          export LIBBASE=${GITHUB_WORKSPACE}/mpas-libs
           export SERIAL_FC=nvfortran
           export SERIAL_F77=nvfortran
           export SERIAL_CC=nvc
@@ -72,6 +82,12 @@ jobs:
           export MPI_F77=mpifort
           export MPI_CC=mpicc
           export MPI_CXX=mpic++
+          
+          # Set correct MPI paths
+          export MPI_ROOT=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/comm_libs/mpi
+          export LD_LIBRARY_PATH=${MPI_ROOT}/lib:${LD_LIBRARY_PATH}
+          export PATH=${MPI_ROOT}/bin:${PATH}
+          
           echo "LIBSRC=$LIBSRC" >> $GITHUB_ENV
           echo "LIBBASE=$LIBBASE" >> $GITHUB_ENV
           echo "SERIAL_FC=$SERIAL_FC" >> $GITHUB_ENV
@@ -82,6 +98,7 @@ jobs:
           echo "MPI_F77=$MPI_F77" >> $GITHUB_ENV
           echo "MPI_CC=$MPI_CC" >> $GITHUB_ENV
           echo "MPI_CXX=$MPI_CXX" >> $GITHUB_ENV
+          echo "MPI_ROOT=$MPI_ROOT" >> $GITHUB_ENV
 
       - name: Create source directory
         run: mkdir -p ${{ env.LIBSRC }}
@@ -145,12 +162,21 @@ jobs:
           wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/netcdf-c-4.7.0.tar.gz
           tar xzvf ${{ env.LIBSRC }}/netcdf-c-4.7.0.tar.gz
           cd netcdf-c-4.7.0
-          export CPPFLAGS="-I${{ env.LIBBASE }}/include"
-          export LDFLAGS="-L${{ env.LIBBASE }}/lib"
+          # Set up environment with correct MPI paths
+          export CPPFLAGS="-I${{ env.LIBBASE }}/include -I${{ env.MPI_ROOT }}/include"
+          export LDFLAGS="-L${{ env.LIBBASE }}/lib -L${{ env.MPI_ROOT }}/lib"
+          export LD_LIBRARY_PATH="${{ env.MPI_ROOT }}/lib:${LD_LIBRARY_PATH}"
           export LIBS="-lhdf5_hl -lhdf5 -lz -ldl"
           export CC=${{ env.MPI_CC }}
-          ./configure --prefix=${{ env.LIBBASE }} --disable-dap --enable-netcdf4 --enable-pnetcdf --enable-cdf5 --enable-parallel-tests --disable-shared
-          make -j 4
+          ./configure --prefix=${{ env.LIBBASE }} \
+                     --disable-dap \
+                     --enable-netcdf4 \
+                     --enable-pnetcdf \
+                     --enable-cdf5 \
+                     --enable-parallel-tests \
+                     --disable-shared \
+                     --with-mpi="${{ env.MPI_ROOT }}"
+          make -j 4 V=1
           make install
           export NETCDF=${{ env.LIBBASE }}
           cd ..
@@ -213,16 +239,17 @@ jobs:
 
       - name: Create tarball of LIBBASE
         run: |
-          tar -czf mpas-libs.tar.gz -C ${{ env.LIBBASE }} .
+          tar -czf mpas-libs-nvidia.25.3.tar.gz -C ${{ env.LIBBASE }} .
 
       - name: Upload LIBBASE as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mpas-libs
-          path: mpas-libs.tar.gz
+          name: mpas-libs-nvidia-25.3
+          path: mpas-libs-nvidia-25.3.tar.gz
           compression-level: 9
 
       - name: Debug Environment
+        if: always()
         run: |
           echo "NVIDIA HPC SDK Version:"
           nvfortran --version
@@ -231,12 +258,44 @@ jobs:
           echo "Environment Variables:"
           env | sort
 
+      - name: Debug MPI Setup
+        if: always()
+        run: |
+          echo "MPI Environment:"
+          env | grep -i mpi
+          echo "MPI Compiler paths:"
+          which mpicc
+          which mpifort
+          echo "MPI Library paths:"
+          find /opt/nvidia -name "libmpi*"
+          find /usr -name "libmpi*"
+          echo "MPI Include paths:"
+          find /opt/nvidia -name "mpi*.h"
+          find /usr -name "mpi*.h"
+          echo "Module paths:"
+          module list
+          module show nvhpc-hpcx-cuda12
+
+      - name: Check MPI Setup
+        if: always()
+        run: |
+          echo "Checking default MPI installation:"
+          which mpicc
+          which mpifort
+          echo "MPI Version info:"
+          mpicc --version
+          mpifort --version
+          echo "Looking for OpenMPI/HPC-X files:"
+          find /opt/nvidia -name "*mpi*"
+          echo "Environment variables:"
+          env | grep -i mpi
+
   build:
     name: Build MPAS-A with OpenACC
     runs-on: ubuntu-latest
     needs: setup
     container: 
-      image: nvcr.io/nvidia/nvhpc:23.11-devel-cuda12.2-ubuntu22.04
+      image: nvcr.io/nvidia/nvhpc:25.3-devel-cuda_multi-ubuntu22.04
 
     steps:
       - name: Checkout code
@@ -245,25 +304,22 @@ jobs:
       - name: Download LIBBASE artifact
         uses: actions/download-artifact@v4
         with:
-          name: mpas-libs
+          name: mpas-libs-nvidia-25.3 
 
       - name: Extract LIBBASE
         run: |
-          mkdir -p $GITHUB_WORKSPACE/mpas-libs
-          tar -xzf mpas-libs.tar.gz -C $GITHUB_WORKSPACE/mpas-libs
-
-      - name: Install MPICH
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mpich libmpich-dev
-          mpicc --version
+          mkdir -p $GITHUB_WORKSPACE/mpas-libs-nvidia-25.3
+          tar -xzf mpas-libs-nvidia-25.3.tar.gz -C $GITHUB_WORKSPACE/mpas-libs
 
       - name: Set environment variables
+        shell: bash
         run: |
-          # Initialize NVIDIA HPC SDK environment
-          source /opt/nvidia/hpc_sdk/Linux_x86_64/23.11/comm_libs/hpcx/latest/hpcx-init.sh
-          source /opt/nvidia/hpc_sdk/Linux_x86_64/23.11/compilers/bin/nvhpc-vars.sh
-
+          # Load NVIDIA HPC SDK module
+          apt-get update && apt-get install -y environment-modules
+          . /etc/profile.d/modules.sh
+          module use /opt/nvidia/hpc_sdk/modulefiles
+          module load nvhpc-hpcx-cuda12
+          
           export LIBBASE=${GITHUB_WORKSPACE:-/tmp}/mpas-libs
 
           export SERIAL_FC=nvfortran
