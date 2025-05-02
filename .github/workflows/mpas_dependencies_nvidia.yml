@@ -1,0 +1,299 @@
+name: Install MPAS Dependencies with NVIDIA OpenACC
+
+env:
+  ACTIONS_STEP_DEBUG: true
+
+on:
+  workflow_dispatch:
+    
+    # push:
+    #     branches:
+    #         - mpas_cicd
+    # pull_request:
+    #     branches:
+    #         - mpas_cicd
+
+jobs:
+  setup:
+    name: Install MPAS Libraries for NVIDIA OpenACC
+    runs-on: ubuntu-latest
+    container: 
+      image: nvcr.io/nvidia/nvhpc:25.3-devel-cuda_multi-ubuntu22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install MPICH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mpich libmpich-dev
+          mpicc --version
+
+      - name: Check MPI installation
+        run: |
+          echo "Checking MPI version..."
+          mpicc --version
+          mpirun --version
+
+      - name: Check Fortran compiler
+        run: |
+          echo "Fortran version:"
+          nvfortran --version
+
+      - name: Install CMake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake
+
+      - name: Install curl
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl
+    
+      - name: Install libcurl development package
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev
+
+      - name: Set environment variables
+        run: |
+          # Initialize NVIDIA HPC SDK environment
+          source /opt/nvidia/hpc_sdk/Linux_x86_64/23.11/comm_libs/hpcx/latest/hpcx-init.sh
+          source /opt/nvidia/hpc_sdk/Linux_x86_64/23.11/compilers/bin/nvhpc-vars.sh
+          
+          export LIBSRC=/tmp/sources
+          export LIBBASE=${GITHUB_WORKSPACE:-/tmp}/mpas-libs
+          export SERIAL_FC=nvfortran
+          export SERIAL_F77=nvfortran
+          export SERIAL_CC=nvc
+          export SERIAL_CXX=nvc++
+          export MPI_FC=mpifort
+          export MPI_F77=mpifort
+          export MPI_CC=mpicc
+          export MPI_CXX=mpic++
+          echo "LIBSRC=$LIBSRC" >> $GITHUB_ENV
+          echo "LIBBASE=$LIBBASE" >> $GITHUB_ENV
+          echo "SERIAL_FC=$SERIAL_FC" >> $GITHUB_ENV
+          echo "SERIAL_F77=$SERIAL_F77" >> $GITHUB_ENV
+          echo "SERIAL_CC=$SERIAL_CC" >> $GITHUB_ENV
+          echo "SERIAL_CXX=$SERIAL_CXX" >> $GITHUB_ENV
+          echo "MPI_FC=$MPI_FC" >> $GITHUB_ENV
+          echo "MPI_F77=$MPI_F77" >> $GITHUB_ENV
+          echo "MPI_CC=$MPI_CC" >> $GITHUB_ENV
+          echo "MPI_CXX=$MPI_CXX" >> $GITHUB_ENV
+
+      - name: Create source directory
+        run: mkdir -p ${{ env.LIBSRC }}
+
+    # - name: Install MPICH
+    #   run: |
+    #     wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/mpich-3.3.1.tar.gz
+    #     tar xzvf ${{ env.LIBSRC }}/mpich-3.3.1.tar.gz
+    #     cd mpich-3.3.1
+    #     ./configure --prefix=${{ env.LIBBASE }}
+    #     make -j 4
+    #     make install
+    #     export PATH=${{ env.LIBBASE }}/bin:$PATH
+    #     export LD_LIBRARY_PATH=${{ env.LIBBASE }}/lib:$LD_LIBRARY_PATH
+    #     cd ..
+    #     rm -rf mpich-3.3.1
+
+
+      - name: Install Zlib
+        run: |
+          wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/zlib-1.2.11.tar.gz
+          tar xzvf ${{ env.LIBSRC }}/zlib-1.2.11.tar.gz
+          cd zlib-1.2.11
+          CC=${{ env.SERIAL_CC }} 
+          ./configure --prefix=${{ env.LIBBASE }} --static
+          make -j 4
+          make install
+          cd ..
+          rm -rf zlib-1.2.11
+
+      - name: Install HDF5
+        run: |
+          wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/hdf5-1.10.5.tar.bz2
+          #bzip2 needed to extract hdf5
+          #apt-get install -y bzip2
+          tar xjvf ${{ env.LIBSRC }}/hdf5-1.10.5.tar.bz2
+          cd hdf5-1.10.5
+          export FC=${{ env.MPI_FC }}
+          export CC=${{ env.MPI_CC }}
+          export CXX=${{ env.MPI_CXX }}
+          ./configure --prefix=${{ env.LIBBASE }} --enable-parallel --with-zlib=${{ env.LIBBASE }} --disable-shared
+          make -j 4
+          make install
+          cd ..
+          rm -rf hdf5-1.10.5
+
+      - name: Install Parallel-netCDF
+        run: |
+          wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/pnetcdf-1.11.2.tar.gz
+          tar xzvf ${{ env.LIBSRC }}/pnetcdf-1.11.2.tar.gz
+          cd pnetcdf-1.11.2
+          ./configure --prefix=${{ env.LIBBASE }}
+          make -j 4
+          make install
+          export PNETCDF=${{ env.LIBBASE }}
+          cd ..
+          rm -rf pnetcdf-1.11.2
+
+      - name: Install NetCDF-C
+        run: |
+          wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/netcdf-c-4.7.0.tar.gz
+          tar xzvf ${{ env.LIBSRC }}/netcdf-c-4.7.0.tar.gz
+          cd netcdf-c-4.7.0
+          export CPPFLAGS="-I${{ env.LIBBASE }}/include"
+          export LDFLAGS="-L${{ env.LIBBASE }}/lib"
+          export LIBS="-lhdf5_hl -lhdf5 -lz -ldl"
+          export CC=${{ env.MPI_CC }}
+          ./configure --prefix=${{ env.LIBBASE }} --disable-dap --enable-netcdf4 --enable-pnetcdf --enable-cdf5 --enable-parallel-tests --disable-shared
+          make -j 4
+          make install
+          export NETCDF=${{ env.LIBBASE }}
+          cd ..
+          rm -rf netcdf-c-4.7.0
+
+      - name: Install NetCDF-Fortran
+        run: |
+          wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/netcdf-fortran-4.4.5.tar.gz
+          tar xzvf ${{ env.LIBSRC }}/netcdf-fortran-4.4.5.tar.gz
+          cd netcdf-fortran-4.4.5
+          export FC=${{ env.MPI_FC }}
+          export F77=${{ env.MPI_F77 }}
+          export LIBS="-lnetcdf ${LIBS}"
+          export FFLAGS="-g -fbacktrace -fallow-argument-mismatch"
+          export FCFLAGS="-g -fbacktrace -fallow-argument-mismatch"
+          export CPPFLAGS="-I${{ env.LIBBASE }}/include"
+          export LDFLAGS="-L${{ env.LIBBASE }}/lib"
+          ./configure --prefix=${{ env.LIBBASE }} --enable-parallel-tests --disable-shared || (echo "Configure failed. Printing config.log:" && cat config.log && exit 1)
+          make -j 4
+          make install
+          cd ..
+          rm -rf netcdf-fortran-4.4.5
+
+      - name: Install PIO
+        run: |
+          git clone https://github.com/NCAR/ParallelIO
+          cd ParallelIO
+          git checkout -b pio-2.5.10 pio2_5_10
+          export PIOSRC=`pwd`
+          cd ..
+          mkdir pio
+          cd pio
+          export CC=${{ env.MPI_CC }}
+          export FC=${{ env.MPI_FC }}
+          cmake -DNetCDF_C_PATH=${{ env.NETCDF }} \
+                -DNetCDF_Fortran_PATH=${{ env.NETCDF }} \
+                -DPnetCDF_PATH=${{ env.PNETCDF }} \
+                -DHDF5_PATH=${{ env.NETCDF }} \
+                -DCMAKE_INSTALL_PREFIX=${{ env.LIBBASE }} \
+                -DPIO_USE_MALLOC=ON \
+                -DCMAKE_VERBOSE_MAKEFILE=1 \
+                -DPIO_ENABLE_TIMING=OFF \
+                -DMPI_C_INCLUDE_PATH=/usr/include/mpich \
+                -DMPI_Fortran_INCLUDE_PATH=/usr/include/mpich \
+                $PIOSRC
+          make
+          make install
+          cd ..
+          rm -rf pio ParallelIO
+          export PIO=${{ env.LIBBASE }}
+
+      - name: Set MPAS environment variables
+        run: |
+          export MPAS_EXTERNAL_LIBS="-L${{ env.LIBBASE }}/lib -lhdf5_hl -lhdf5 -ldl -lz -lpnetcdf"
+          export MPAS_EXTERNAL_INCLUDES="-I${{ env.LIBBASE }}/include"
+          export PNETCDF=${{ env.LIBBASE }}
+          echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS" >> $GITHUB_ENV
+          echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
+          echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
+
+      - name: Create tarball of LIBBASE
+        run: |
+          tar -czf mpas-libs.tar.gz -C ${{ env.LIBBASE }} .
+
+      - name: Upload LIBBASE as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpas-libs
+          path: mpas-libs.tar.gz
+          compression-level: 9
+
+      - name: Debug Environment
+        run: |
+          echo "NVIDIA HPC SDK Version:"
+          nvfortran --version
+          echo "MPI Version:"
+          mpicc --version
+          echo "Environment Variables:"
+          env | sort
+
+  build:
+    name: Build MPAS-A with OpenACC
+    runs-on: ubuntu-latest
+    needs: setup
+    container: 
+      image: nvcr.io/nvidia/nvhpc:23.11-devel-cuda12.2-ubuntu22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download LIBBASE artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mpas-libs
+
+      - name: Extract LIBBASE
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/mpas-libs
+          tar -xzf mpas-libs.tar.gz -C $GITHUB_WORKSPACE/mpas-libs
+
+      - name: Install MPICH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mpich libmpich-dev
+          mpicc --version
+
+      - name: Set environment variables
+        run: |
+          # Initialize NVIDIA HPC SDK environment
+          source /opt/nvidia/hpc_sdk/Linux_x86_64/23.11/comm_libs/hpcx/latest/hpcx-init.sh
+          source /opt/nvidia/hpc_sdk/Linux_x86_64/23.11/compilers/bin/nvhpc-vars.sh
+
+          export LIBBASE=${GITHUB_WORKSPACE:-/tmp}/mpas-libs
+
+          export SERIAL_FC=nvfortran
+          export SERIAL_F77=nvfortran
+          export SERIAL_CC=nvc
+          export SERIAL_CXX=nvc++
+          export MPI_FC=mpifort
+          export MPI_F77=mpifort
+          export MPI_CC=mpicc
+          export MPI_CXX=mpic++
+          echo "LIBSRC=$LIBSRC" >> $GITHUB_ENV
+          echo "LIBBASE=$LIBBASE" >> $GITHUB_ENV
+          echo "SERIAL_FC=$SERIAL_FC" >> $GITHUB_ENV
+          echo "SERIAL_F77=$SERIAL_F77" >> $GITHUB_ENV
+          echo "SERIAL_CC=$SERIAL_CC" >> $GITHUB_ENV
+          echo "SERIAL_CXX=$SERIAL_CXX" >> $GITHUB_ENV
+          echo "MPI_FC=$MPI_FC" >> $GITHUB_ENV
+          echo "MPI_F77=$MPI_F77" >> $GITHUB_ENV
+          echo "MPI_CC=$MPI_CC" >> $GITHUB_ENV
+          echo "MPI_CXX=$MPI_CXX" >> $GITHUB_ENV
+   
+          export MPAS_EXTERNAL_LIBS="-L${LIBBASE}/lib -lhdf5_hl -lhdf5 -ldl -lz -lpnetcdf"
+          export MPAS_EXTERNAL_INCLUDES="-I${LIBBASE}/include"
+          export PNETCDF=${LIBBASE}
+          echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS" >> $GITHUB_ENV
+          echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
+          echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
+        
+
+      - name: Build MPAS-A
+        run: |
+          cd $GITHUB_WORKSPACE
+          make -j 4 pgi CORE=atmosphere USE_PIO2=true OPENACC=true
