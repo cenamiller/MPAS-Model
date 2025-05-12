@@ -1,0 +1,205 @@
+name: Install MPAS Dependencies with NVIDIA OpenACC
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - mpas_cicd
+  pull_request:
+    branches:
+      - mpas_cicd
+
+jobs:
+  setup:
+    name: Install MPAS Libraries for NVIDIA OpenACC
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install MPICH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mpich libmpich-dev
+          mpicc --version
+
+      - name: Install NVIDIA HPC SDK
+        run: |
+          wget https://developer.download.nvidia.com/hpc-sdk/25.3/nvhpc_2025_253_Linux_x86_64_cuda_multi.tar.gz
+          tar xpzf nvhpc_2025_253_Linux_x86_64_cuda_multi.tar.gz
+          cd nvhpc_2025_253_Linux_x86_64_cuda_multi
+          ./install --accept-eula --silent
+          cd ..
+          rm -rf nvhpc_2025_253_Linux_x86_64_cuda_multi*
+
+      - name: Set up NVIDIA environment
+        run: |
+          . /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin/setenv.sh
+          export PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin:$PATH
+          export LD_LIBRARY_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/lib:$LD_LIBRARY_PATH
+          echo "PATH=$PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
+      - name: Install PNetCDF
+        run: |
+          wget -P /tmp http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/pnetcdf-1.11.2.tar.gz
+          tar xzvf /tmp/pnetcdf-1.11.2.tar.gz
+          cd pnetcdf-1.11.2
+          export CC=nvc
+          export FC=nvfortran
+          export CXX=nvc++
+          ./configure --prefix=/usr/local
+          make -j 4
+          sudo make install
+          cd ..
+          rm -rf pnetcdf-1.11.2
+
+      - name: Install other dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y environment-modules cmake curl libcurl4-openssl-dev
+
+      - name: Set environment variables
+        run: |
+          export LIBSRC=/tmp/sources
+          export LIBBASE=${GITHUB_WORKSPACE}/mpas-libs
+          export SERIAL_FC=nvfortran
+          export SERIAL_F77=nvfortran
+          export SERIAL_CC=nvc
+          export SERIAL_CXX=nvc++
+          export MPI_FC=mpifort
+          export MPI_F77=mpifort
+          export MPI_CC=mpicc
+          export MPI_CXX=mpic++
+          
+          # Export all variables to GITHUB_ENV
+          {
+            echo "LIBSRC=$LIBSRC"
+            echo "LIBBASE=$LIBBASE"
+            echo "SERIAL_FC=$SERIAL_FC"
+            echo "SERIAL_F77=$SERIAL_F77"
+            echo "SERIAL_CC=$SERIAL_CC"
+            echo "SERIAL_CXX=$SERIAL_CXX"
+            echo "MPI_FC=$MPI_FC"
+            echo "MPI_F77=$MPI_F77"
+            echo "MPI_CC=$MPI_CC"
+            echo "MPI_CXX=$MPI_CXX"
+          } >> $GITHUB_ENV
+
+      - name: Create source directory
+        run: mkdir -p ${{ env.LIBSRC }}
+
+      - name: Set MPAS environment variables
+        run: |
+          export MPAS_EXTERNAL_LIBS="-L/usr/local/lib -lpnetcdf"
+          export MPAS_EXTERNAL_INCLUDES="-I/usr/local/include"
+          export PNETCDF=/usr/local
+          echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS" >> $GITHUB_ENV
+          echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
+          echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
+
+      - name: Create tarball of LIBBASE
+        run: |
+          tar -czf mpas-libs-nvidia.25.3.tar.gz -C ${{ env.LIBBASE }} .
+
+      - name: Upload LIBBASE as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpas-libs-nvidia-25.3
+          path: mpas-libs-nvidia-25.3.tar.gz
+          compression-level: 9
+
+      - name: Debug Environment
+        if: always()
+        run: |
+          echo "NVIDIA HPC SDK Version:"
+          nvfortran --version
+          echo "MPI Version:"
+          mpicc --version
+          echo "Environment Variables:"
+          env | sort
+
+  build:
+    name: Build MPAS-A with OpenACC
+    runs-on: ubuntu-latest
+    needs: setup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download LIBBASE artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mpas-libs-nvidia-25.3 
+
+      - name: Extract LIBBASE
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/mpas-libs
+          tar -xzf mpas-libs-nvidia-25.3.tar.gz -C $GITHUB_WORKSPACE/mpas-libs
+
+      - name: Install NVIDIA HPC SDK
+        run: |
+          wget https://developer.download.nvidia.com/hpc-sdk/25.3/nvhpc_2025_253_Linux_x86_64_cuda_multi.tar.gz
+          tar xpzf nvhpc_2025_253_Linux_x86_64_cuda_multi.tar.gz
+          cd nvhpc_2025_253_Linux_x86_64_cuda_multi
+          ./install --accept-eula --silent
+          cd ..
+          rm -rf nvhpc_2025_253_Linux_x86_64_cuda_multi*
+
+      - name: Set up NVIDIA environment
+        run: |
+          . /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin/setenv.sh
+          export PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin:$PATH
+          export LD_LIBRARY_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/lib:$LD_LIBRARY_PATH
+          echo "PATH=$PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
+      - name: Install MPICH
+        run: |
+          wget -P /tmp http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/mpich-3.3.1.tar.gz
+          tar xzvf /tmp/mpich-3.3.1.tar.gz
+          cd mpich-3.3.1
+          ./configure --prefix=/usr/local
+          make -j 4
+          sudo make install
+          cd ..
+          rm -rf mpich-3.3.1
+
+      - name: Set environment variables
+        run: |
+          export LIBBASE=${GITHUB_WORKSPACE}/mpas-libs
+          export SERIAL_FC=nvfortran
+          export SERIAL_F77=nvfortran
+          export SERIAL_CC=nvc
+          export SERIAL_CXX=nvc++
+          export MPI_FC=mpifort
+          export MPI_F77=mpifort
+          export MPI_CC=mpicc
+          export MPI_CXX=mpic++
+          
+          export MPAS_EXTERNAL_LIBS="-L${LIBBASE}/lib -lhdf5_hl -lhdf5 -ldl -lz -lpnetcdf"
+          export MPAS_EXTERNAL_INCLUDES="-I${LIBBASE}/include"
+          export PNETCDF=${LIBBASE}
+          
+          # Export all variables to GITHUB_ENV
+          {
+            echo "LIBBASE=$LIBBASE"
+            echo "SERIAL_FC=$SERIAL_FC"
+            echo "SERIAL_F77=$SERIAL_F77"
+            echo "SERIAL_CC=$SERIAL_CC"
+            echo "SERIAL_CXX=$SERIAL_CXX"
+            echo "MPI_FC=$MPI_FC"
+            echo "MPI_F77=$MPI_F77"
+            echo "MPI_CC=$MPI_CC"
+            echo "MPI_CXX=$MPI_CXX"
+            echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS"
+            echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES"
+            echo "PNETCDF=$PNETCDF"
+          } >> $GITHUB_ENV
+
+      - name: Build MPAS-A
+        run: |
+          cd $GITHUB_WORKSPACE
+          make -j 4 pgi CORE=atmosphere USE_PIO2=true OPENACC=true
