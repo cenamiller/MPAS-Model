@@ -13,6 +13,8 @@ jobs:
   setup:
     name: Install MPAS Libraries for NVIDIA OpenACC
     runs-on: ubuntu-latest
+    container: 
+      image: nvcr.io/nvidia/nvhpc:25.3-devel-cuda_multi-ubuntu22.04
 
     steps:
       - name: Checkout code
@@ -24,15 +26,6 @@ jobs:
           sudo apt-get install -y mpich libmpich-dev
           mpicc --version
 
-      - name: Install NVIDIA HPC SDK
-        run: |
-          wget https://developer.download.nvidia.com/hpc-sdk/25.3/nvhpc_2025_253_Linux_x86_64_cuda_multi.tar.gz
-          tar xpzf nvhpc_2025_253_Linux_x86_64_cuda_multi.tar.gz
-          cd nvhpc_2025_253_Linux_x86_64_cuda_multi
-          ./install --accept-eula --silent
-          cd ..
-          rm -rf nvhpc_2025_253_Linux_x86_64_cuda_multi*
-
       - name: Set up NVIDIA environment
         run: |
           . /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin/setenv.sh
@@ -40,25 +33,7 @@ jobs:
           export LD_LIBRARY_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/lib:$LD_LIBRARY_PATH
           echo "PATH=$PATH" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
-
-      - name: Install PNetCDF
-        run: |
-          wget -P /tmp http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/pnetcdf-1.11.2.tar.gz
-          tar xzvf /tmp/pnetcdf-1.11.2.tar.gz
-          cd pnetcdf-1.11.2
-          export CC=nvc
-          export FC=nvfortran
-          export CXX=nvc++
-          ./configure --prefix=/usr/local
-          make -j 4
-          sudo make install
-          cd ..
-          rm -rf pnetcdf-1.11.2
-
-      - name: Install other dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y environment-modules cmake curl libcurl4-openssl-dev
+      
 
       - name: Set environment variables
         run: |
@@ -89,6 +64,27 @@ jobs:
 
       - name: Create source directory
         run: mkdir -p ${{ env.LIBSRC }}
+
+      - name: Install PNetCDF
+        run: |
+          wget -P ${{ env.LIBSRC }} http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/pnetcdf-1.11.2.tar.gz
+          tar xzvf ${{ env.LIBSRC }}/pnetcdf-1.11.2.tar.gz
+          cd pnetcdf-1.11.2
+          export CC=nvc
+          export FC=nvfortran
+          export CXX=nvc++
+          ./configure --prefix=${{ env.LIBBASE }}
+          make -j 4
+          make install
+          export PNETCDF=${{ env.LIBBASE }}
+          cd ..
+          rm -rf pnetcdf-1.11.2
+
+      - name: Install other dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y environment-modules cmake curl libcurl4-openssl-dev
+
 
       - name: Set MPAS environment variables
         run: |
@@ -202,4 +198,4 @@ jobs:
       - name: Build MPAS-A
         run: |
           cd $GITHUB_WORKSPACE
-          make -j 4 pgi CORE=atmosphere USE_PIO2=true OPENACC=true
+          make -j 4 pgi CORE=atmosphere OPENACC=true
