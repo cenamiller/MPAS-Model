@@ -5,12 +5,12 @@ env:
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - mpas_cicd
-  pull_request:
-    branches:
-      - mpas_cicd
+  # push:
+  #   branches:
+  #     - mpas_cicd
+  # pull_request:
+  #   branches:
+  #     - mpas_cicd
 
 jobs:
   setup:
@@ -25,21 +25,23 @@ jobs:
 
       - name: Check MPI installation
         run: |
-          echo "Checking MPI version..."
           mpicc --version
           mpirun --version
 
       - name: Check Fortran compiler
         run: |
-          echo "Fortran version:"
           nvfortran --version
+
+      - name: Install Python3
+        run: |
+          apt-get update
+          apt-get install -y python3
 
       - name: Install MPICH
         run: |
           apt-get update
           apt-get install -y mpich libmpich-dev
           mpicc --version
-          # Set MPI environment variables
           export MPICC=mpicc
           export MPICXX=mpic++
           export MPIFC=mpifort
@@ -51,41 +53,18 @@ jobs:
 
       - name: Set up NVIDIA environment
         run: |
-          echo "Checking NVIDIA HPC SDK installation..."
-          ls -la /opt/nvidia/hpc_sdk/
-          echo "Looking for setenv.sh..."
-          find /opt/nvidia/hpc_sdk -name "setenv.sh"
-          
-          # Set up environment variables
           export PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin:$PATH
           export LD_LIBRARY_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/lib:$LD_LIBRARY_PATH
           export CPATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/include:$CPATH
-          
           echo "PATH=$PATH" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
           echo "CPATH=$CPATH" >> $GITHUB_ENV
-          
-          # Verify compiler availability
           which nvfortran
           which nvc
           which nvc++
 
-      - name: Debug NVIDIA HPC SDK paths
-        run: |
-          echo "Listing /opt/nvidia/hpc_sdk contents:"
-          ls -la /opt/nvidia/hpc_sdk/
-          echo "Listing Linux_x86_64 contents (if exists):"
-          ls -la /opt/nvidia/hpc_sdk/Linux_x86_64/ || echo "Directory not found"
-          echo "Looking for nvhpc-vars.sh:"
-          find /opt/nvidia/hpc_sdk -name "nvhpc-vars.sh" || echo "File not found"
-          echo "Looking for environment setup files:"
-          find /opt/nvidia/hpc_sdk -type f -name "*vars.sh"
-          echo "Full directory tree of hpc_sdk:"
-          tree /opt/nvidia/hpc_sdk || (find /opt/nvidia/hpc_sdk -type d)
-
       - name: Set environment variables
         run: |
-          # Use absolute paths that work in both local and GitHub Actions environments
           export LIBSRC=/tmp/sources
           export LIBBASE=/tmp/mpas-libs
           export SERIAL_FC=nvfortran
@@ -96,8 +75,6 @@ jobs:
           export MPI_F77=mpifort
           export MPI_CC=mpicc
           export MPI_CXX=mpic++
-          
-          # Export all variables to GITHUB_ENV
           {
             echo "LIBSRC=$LIBSRC"
             echo "LIBBASE=$LIBBASE"
@@ -113,84 +90,20 @@ jobs:
 
       - name: Install PNetCDF
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Compiler versions:"
-          nvc --version
-          nvfortran --version
-          mpicc --version
-          
-          echo "Environment variables:"
-          echo "CC=$CC"
-          echo "FC=$FC"
-          echo "CXX=$CXX"
-          echo "PATH=$PATH"
-          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
-          
-          # Create directories
           mkdir -p ${{ env.LIBSRC }}
           mkdir -p ${{ env.LIBBASE }}
-          
-          # Download and extract PNetCDF
           cd ${{ env.LIBSRC }}
           wget http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/pnetcdf-1.11.2.tar.gz
           tar xzvf pnetcdf-1.11.2.tar.gz
           cd pnetcdf-1.11.2
-          
-          # Set compiler environment
           export CC=mpicc
           export FC=mpifort
           export CXX=mpic++
-          
-          # Configure with debug output
-          echo "Running configure..."
-          ./configure --prefix=${{ env.LIBBASE }} 2>&1 | tee config.log
-          CONFIG_STATUS=$?
-          echo "Configure exit status: $CONFIG_STATUS"
-          if [ $CONFIG_STATUS -ne 0 ]; then
-            echo "Configure failed. Contents of config.log:"
-            cat config.log
-            exit 1
-          fi
-          
-          # Build with debug output
-          echo "Running make..."
-          make -j 4 V=1 2>&1 | tee build.log
-          MAKE_STATUS=$?
-          echo "Make exit status: $MAKE_STATUS"
-          if [ $MAKE_STATUS -ne 0 ]; then
-            echo "Build failed. Contents of build.log:"
-            cat build.log
-            exit 1
-          fi
-          
-          # Install with debug output
-          echo "Running make install..."
-          make install 2>&1 | tee install.log
-          INSTALL_STATUS=$?
-          echo "Install exit status: $INSTALL_STATUS"
-          if [ $INSTALL_STATUS -ne 0 ]; then
-            echo "Install failed. Contents of install.log:"
-            cat install.log
-            exit 1
-          fi
-          
-          # Verify installation
-          echo "Checking installation in LIBBASE:"
-          ls -la ${{ env.LIBBASE }}
-          echo "Checking lib directory:"
-          ls -la ${{ env.LIBBASE }}/lib
-          echo "Checking include directory:"
-          ls -la ${{ env.LIBBASE }}/include
-          
-          # Clean up
+          ./configure --prefix=${{ env.LIBBASE }}
+          make -j 4 V=1
+          make install
           cd ${{ env.LIBSRC }}
           rm -rf pnetcdf-1.11.2*
-
-#      - name: Install other dependencies
-#        run: |
-#          sudo apt-get update
-#          sudo apt-get install -y cmake 
-
 
       - name: Set MPAS environment variables
         run: |
@@ -201,36 +114,20 @@ jobs:
           echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
           echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
 
-      - name: Create tarball of LIBBASE
+      - name: Build MPAS-A
         run: |
-          echo "Checking LIBBASE directory:"
-          ls -la ${{ env.LIBBASE }} || echo "LIBBASE directory not found"
-          
-          if [ ! -d "${{ env.LIBBASE }}" ]; then
-            echo "Creating LIBBASE directory"
-            mkdir -p ${{ env.LIBBASE }}
-          fi
-          
-          echo "Contents of LIBBASE:"
-          ls -la ${{ env.LIBBASE }}
-          
-          if [ -z "$(ls -A ${{ env.LIBBASE }})" ]; then
-            echo "Error: LIBBASE directory is empty"
-            exit 1
-          fi
-          
-          echo "Creating tarball..."
-          tar -czf mpas-libs-nvidia.25.3.tar.gz -C ${{ env.LIBBASE }} .
-          
-          echo "Checking tarball:"
-          ls -lh mpas-libs-nvidia.25.3.tar.gz
-          tar -tvf mpas-libs-nvidia.25.3.tar.gz
+          cd $GITHUB_WORKSPACE
+          make -j 4 pgi CORE=atmosphere OPENACC=true
+          echo "MPAS-A build successful"
+
+
 
       - name: Upload LIBBASE as artifact
+        if: ${{ github.actor != 'nektos/act' && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: mpas-libs-nvidia-25.3
-          path: mpas-libs-nvidia-25.3.tar.gz
+          path: mpas-libs-nvidia.25.3.tar.gz
 
       - name: Debug Environment
         if: always()
@@ -420,7 +317,19 @@ jobs:
           echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
           echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
 
+      - name: Build MPAS-A
+        run: |
+          echo "Building MPAS-A to test PNetCDF installation..."
+          cd $GITHUB_WORKSPACE
+          make -j 4 pgi CORE=atmosphere OPENACC=true
+          if [ $? -ne 0 ]; then
+            echo "MPAS-A build failed"
+            exit 1
+          fi
+          echo "MPAS-A build successful"
+
       - name: Create tarball of LIBBASE
+        if: success()
         run: |
           echo "Checking LIBBASE directory:"
           ls -la ${{ env.LIBBASE }} || echo "LIBBASE directory not found"
@@ -444,12 +353,27 @@ jobs:
           echo "Checking tarball:"
           ls -lh mpas-libs-nvidia.25.3.tar.gz
           tar -tvf mpas-libs-nvidia.25.3.tar.gz
+          
+          # For local testing with nektos/act
+          if [ "$GITHUB_ACTOR" = "nektos/act" ]; then
+            echo "Local testing detected, copying tarball to /Users/cmille73/ ..."
+            src="$(realpath mpas-libs-nvidia.25.3.tar.gz)"
+            dst="$(realpath /Users/cmille73/mpas-libs-nvidia.25.3.tar.gz)"
+            if [ "$src" != "$dst" ]; then
+              cp "$src" "$dst"
+              echo "Tarball copied to: $dst"
+            else
+              echo "Source and destination are the same file, skipping copy."
+            fi
+            ls -lh "/Users/cmille73/mpas-libs-nvidia.25.3.tar.gz"
+          fi
 
       - name: Upload LIBBASE as artifact
+        if: ${{ github.actor != 'nektos/act' && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: mpas-libs-nvidia-25.3
-          path: mpas-libs-nvidia-25.3.tar.gz
+          path: mpas-libs-nvidia.25.3.tar.gz
 
       - name: Debug Environment
         if: always()

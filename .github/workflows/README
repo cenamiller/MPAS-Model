@@ -1,0 +1,58 @@
+# Creating MPAS Libraries Tarball with NVIDIA OpenACC Support
+
+## Overview
+This document describes the process of creating a tarball containing the MPAS libraries (specifically PNetCDF) built with NVIDIA OpenACC support.
+
+## Steps Taken
+
+1. **Container Environment**
+   - Used NVIDIA HPC SDK container: `nvcr.io/nvidia/nvhpc:25.3-devel-cuda_multi-ubuntu22.04`
+   - Container provides NVIDIA compilers and CUDA support
+
+2. **PNetCDF Installation**
+   - Created directories:
+     ```bash
+     mkdir -p /tmp/sources
+     mkdir -p /tmp/mpas-libs
+     ```
+   - Downloaded and installed PNetCDF 1.11.2:
+     ```bash
+     cd /tmp/sources
+     wget http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/pnetcdf-1.11.2.tar.gz
+     tar xzvf pnetcdf-1.11.2.tar.gz
+     cd pnetcdf-1.11.2
+     ```
+   - Configured with MPI compilers:
+     ```bash
+     export CC=mpicc
+     export FC=mpifort
+     export CXX=mpic++
+     ./configure --prefix=/tmp/mpas-libs
+     make -j 4
+     make install
+     ```
+
+3. **Creating the Tarball**
+   - Created tarball from the installed libraries:
+     ```bash
+     cd /tmp
+     tar -czf mpas-libs-nvidia.25.3.tar.gz -C /tmp/mpas-libs .
+     ```
+
+4. **Extracting the Tarball**
+   - The tarball was copied from the container to the host system using:
+     ```bash
+     docker cp <container_id>:/Users/cmille73/MPAS_CI/MPAS-Model/mpas-libs-nvidia.25.3.tar.gz /Users/cmille73/
+     ```
+
+## Tarball Contents
+The resulting tarball (`mpas-libs-nvidia.25.3.tar.gz`, 7.5MB) contains:
+- PNetCDF libraries and headers
+- Utility programs
+- Man pages
+- Configuration files
+
+## Usage
+To use these libraries in MPAS builds:
+- Include path: `-I/path/to/mpas-libs/include`
+- Library path: `-L/path/to/mpas-libs/lib -lpnetcdf`
