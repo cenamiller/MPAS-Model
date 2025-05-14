@@ -1,0 +1,115 @@
+name: Build MPAS-A & Run 240km Test with NVIDIA OpenACC
+
+on:
+    push:
+      branches:
+        - mpas_cicd
+    pull_request:
+      branches:
+        - mpas_cicd
+
+jobs:
+  build-on-libs:
+    name: Build MPAS-A & Run 240km Test with NVIDIA OpenACC
+    runs-on: ubuntu-latest
+    container: 
+      image: nvcr.io/nvidia/nvhpc:25.3-devel-cuda_multi-ubuntu22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set WORKSPACE variable
+        run: |
+          export WORKSPACE=${GITHUB_WORKSPACE:-$(pwd)}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "WORKSPACE=$WORKSPACE"
+
+      - name: Install MPICH
+        run: |
+          apt-get update
+          apt-get install -y mpich libmpich-dev
+          mpicc --version
+
+      - name: Install python3
+        run: |
+          apt-get update
+          apt-get install -y python3
+
+      - name: Set up NVIDIA environment
+        run: |
+          export PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin:$PATH
+          export LD_LIBRARY_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/lib:$LD_LIBRARY_PATH
+          export CPATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/include:$CPATH
+          echo "PATH=$PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "CPATH=$CPATH" >> $GITHUB_ENV
+
+      - name: Extract LIBBASE from NVIDIA libraries
+        run: |
+          cd ${WORKSPACE}
+          export LIBBASE=${WORKSPACE}/mpas-libs
+          mkdir -p ${LIBBASE}
+          cp ${WORKSPACE}/.github/workflows/mpas-libs-nvidia.25.3.tar.gz ${WORKSPACE}/
+          tar -xzf ${WORKSPACE}/mpas-libs-nvidia.25.3.tar.gz -C ${LIBBASE}
+          echo "LIBBASE=${LIBBASE}" >> $GITHUB_ENV
+          echo "LIBBASE=${LIBBASE}"
+
+      - name: Set environment variables
+        run: |
+          export SERIAL_FC=nvfortran
+          export SERIAL_F77=nvfortran
+          export SERIAL_CC=nvc
+          export SERIAL_CXX=nvc++
+          export MPI_FC=mpifort
+          export MPI_F77=mpifort
+          export MPI_CC=mpicc
+          export MPI_CXX=mpic++
+          {
+            echo "LIBSRC=$LIBSRC"
+            echo "LIBBASE=$LIBBASE"
+            echo "SERIAL_FC=$SERIAL_FC"
+            echo "SERIAL_F77=$SERIAL_F77"
+            echo "SERIAL_CC=$SERIAL_CC"
+            echo "SERIAL_CXX=$SERIAL_CXX"
+            echo "MPI_FC=$MPI_FC"
+            echo "MPI_F77=$MPI_F77"
+            echo "MPI_CC=$MPI_CC"
+            echo "MPI_CXX=$MPI_CXX"
+          } >> $GITHUB_ENV
+   
+          export MPAS_EXTERNAL_LIBS="-L${LIBBASE}/lib -lpnetcdf"
+          export MPAS_EXTERNAL_INCLUDES="-I${LIBBASE}/include"
+          export PNETCDF=${LIBBASE}
+          echo "MPAS_EXTERNAL_LIBS=$MPAS_EXTERNAL_LIBS" >> $GITHUB_ENV
+          echo "MPAS_EXTERNAL_INCLUDES=$MPAS_EXTERNAL_INCLUDES" >> $GITHUB_ENV
+          echo "PNETCDF=$PNETCDF" >> $GITHUB_ENV
+
+      - name: Build MPAS-A CORE=init_atmosphere
+        run: |
+          cd $WORKSPACE
+          make pgi CORE=init_atmosphere OPENACC=true
+
+      - name: Build MPAS-A CORE=atmosphere
+        run: |
+          cd $WORKSPACE
+          make pgi CORE=atmosphere OPENACC=true
+
+      - name: Decompress 240km Test Folder & link atmosphere_model
+        run: |
+          cd ${WORKSPACE}
+          tar -xzf .github/workflows/240km.tar.gz
+          cd ${WORKSPACE}/240km
+          ln -sf ../atmosphere_model .
+
+      - name: Run atmosphere
+        run: |
+          cd ${WORKSPACE}/240km
+          mpirun -np 1 ./atmosphere_model 2>&1 | tee log.atmosphere.0000.out
+          #mpirun -np 4 ./atmosphere_model 2>&1 | tee log.atmosphere.0000.out
+
+      - name: Upload atmosphere output
+        uses: actions/upload-artifact@v4
+        with:
+          name: log.atmosphere.0000.out
+          path: 240km/log.atmosphere.0000.out 
