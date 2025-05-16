@@ -1,0 +1,95 @@
+# Build stage
+FROM nvcr.io/nvidia/nvhpc:25.3-devel-cuda_multi-ubuntu22.04 AS builder
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install essential packages and clean up in the same layer
+RUN apt-get update && apt-get install -y \
+    wget \
+    build-essential \
+    python3 \
+    mpich \
+    libmpich-dev \
+    m4 \
+    autoconf \
+    automake \
+    libtool \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create library directory
+RUN mkdir -p /opt/mpas-libs-nvidia
+
+# Install PNetCDF for NVIDIA compilers
+RUN cd /tmp && \
+    wget http://www2.mmm.ucar.edu/people/duda/files/mpas/sources/pnetcdf-1.11.2.tar.gz && \
+    tar xzvf pnetcdf-1.11.2.tar.gz && \
+    cd pnetcdf-1.11.2 && \
+    export CC=mpicc && \
+    export FC=mpifort && \
+    export CXX=mpic++ && \
+    ./configure --prefix=/opt/mpas-libs-nvidia && \
+    make -j$(nproc) && \
+    make install && \
+    cd .. && \
+    rm -rf pnetcdf-1.11.2* && \
+    rm -rf /tmp/*
+
+# Final stage
+FROM nvcr.io/nvidia/nvhpc:25.3-devel-cuda_multi-ubuntu22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin:$PATH
+ENV LD_LIBRARY_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/lib:$LD_LIBRARY_PATH
+ENV CPATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/include:$CPATH
+
+# Install minimal required packages
+RUN apt-get update && apt-get install -y \
+    mpich \
+    libmpich-dev \
+    coreutils \
+    python3 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy only the necessary files from the builder stage
+COPY --from=builder /opt/mpas-libs-nvidia /opt/mpas-libs-nvidia
+
+# Set environment variables for MPAS
+ENV MPAS_EXTERNAL_LIBS="-L/opt/mpas-libs-nvidia/lib -lpnetcdf"
+ENV MPAS_EXTERNAL_INCLUDES="-I/opt/mpas-libs-nvidia/include"
+ENV PNETCDF="/opt/mpas-libs-nvidia"
+
+# Set working directory
+WORKDIR /workspace
+
+# Verify installations and check component sizes
+RUN nvfortran --version && \
+    nvc --version && \
+    mpicc --version && \
+    python3 --version && \
+    echo "=== Component Sizes ===" && \
+    du -sh /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/cuda && \
+    echo "=== Library Sizes ===" && \
+    du -sh /opt/mpas-libs-nvidia && \
+    echo "=== Total Image Size ===" && \
+    du -sh /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/
+
+# Clean up unnecessary NVIDIA components
+RUN rm -rf /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/math_libs \
+    /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/comm_libs \
+    /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/examples \
+    /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/doc \
+    /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/lib/*.a \
+    /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/lib/*.o \
+    /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/man \
+    /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/include/*.mod \
+    /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/include/*.h \
+    && ln -sf /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin/nvc /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin/pgcc \
+    && ln -sf /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin/nvfortran /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin/pgf90 \
+    && ln -sf /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin/nvc++ /opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin/pgc++
+
+# Set default command
+CMD ["/bin/bash"] 
