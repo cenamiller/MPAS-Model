@@ -1,0 +1,26 @@
+name: mpas_build_nvidia
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ mpas_cicd ]
+  push:
+    branches: [ mpas_cicd ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: cmille73/mpas-nvidia:carlp-mpich
+      options: --gpus all
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Build MPAS
+      run: |
+        cd src
+        make -j 4 pgi CORE=atmosphere OPENACC=true
+
