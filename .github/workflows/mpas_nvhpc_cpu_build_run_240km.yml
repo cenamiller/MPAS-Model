@@ -1,0 +1,57 @@
+name: Build MPAS-A with NVHPC for CPU & Run 240km Test
+
+on:
+    push:
+      branches:
+        - workflows
+    pull_request:
+      branches:
+        - workflows
+
+jobs:
+  build-on-libs:
+    name: Build MPAS-A & Run 240km Test with NVIDIA OpenACC
+    runs-on: ubuntu-latest
+    container: 
+      #image: cmille73/mpas-nvidia:25.3-reduced
+      image: ncarcisl/cisldev-x86_64-almalinux9-nvhpc-mpich3
+      
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set WORKSPACE variable
+        run: |
+          export WORKSPACE=${GITHUB_WORKSPACE:-$(pwd)}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "WORKSPACE=$WORKSPACE"
+
+      - name: Set up environment
+        run: |
+          cd /container
+          source config_env.sh
+
+      - name: Build MPAS-A CORE=atmosphere
+        run: |
+          cd $WORKSPACE
+          make -j 4 nvhpc CORE=atmosphere 
+
+      - name: Decompress 240km Test Folder & link atmosphere_model
+        run: |
+          cd ${WORKSPACE}
+          tar -xzf .github/workflows/240km.tar.gz
+          cd ${WORKSPACE}/240km
+          ln -sf ../atmosphere_model .
+
+      - name: Run atmosphere
+        run: |
+          cd ${WORKSPACE}/240km
+          mpirun -np 1 ./atmosphere_model 2>&1 | tee log.atmosphere.0000.out
+          #mpirun -np 4 ./atmosphere_model 2>&1 | tee log.atmosphere.0000.out
+
+      - name: Upload atmosphere output
+        uses: actions/upload-artifact@v4
+        with:
+          name: log.atmosphere.0000.out
+          path: 240km/log.atmosphere.0000.out 
