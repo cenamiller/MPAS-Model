@@ -30,8 +30,8 @@ jobs:
       - name: Set up environment
         run: |
           cd /container
-          ls -la .
-          source config_env.sh
+          chmod +x config_env.sh
+          . ./config_env.sh
 
       - name: Build MPAS-A CORE=atmosphere
         run: |
