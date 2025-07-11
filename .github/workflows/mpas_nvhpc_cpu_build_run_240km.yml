@@ -31,7 +31,7 @@ jobs:
         run: |
           cd /container
           chmod +x config_env.sh
-          sourceconfig_env.sh
+          source config_env.sh
 
       - name: Build MPAS-A CORE=atmosphere
         run: |
