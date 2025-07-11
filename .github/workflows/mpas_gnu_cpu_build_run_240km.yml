@@ -7,6 +7,7 @@ on:
     pull_request:
       branches:
         - workflows
+    workflow_dispatch:
 
 jobs:
   build-on-libs:
@@ -36,6 +37,12 @@ jobs:
           tar -xzf .github/workflows/240km.tar.gz
           cd ${WORKSPACE}/240km
           ln -sf ../atmosphere_model .
+
+      - name: Modify namelist to run for 1 day
+        run: |
+          cd ${WORKSPACE}/240km
+          sed -i "s/config_run_duration = '5_00:00:00'/config_run_duration = '1_00:00:00'/" namelist.atmosphere
+          echo "Modified namelist.atmosphere to run for 1 day instead of 5 days"
 
       - name: Run atmosphere with 1 rank
         run: |
