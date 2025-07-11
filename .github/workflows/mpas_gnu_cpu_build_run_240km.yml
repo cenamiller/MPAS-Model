@@ -1,0 +1,54 @@
+name: Build MPAS-A with GNU & Run 240km (1 rank)
+
+on:
+    push:
+      branches:
+        - workflows
+    pull_request:
+      branches:
+        - workflows
+
+jobs:
+  build-on-libs:
+    name: Build MPAS-A with GNU & Run 240km (1 rank)
+    runs-on: ubuntu-latest
+    container: 
+      image: cmille73/mpas-gnu:latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set WORKSPACE variable
+        run: |
+          export WORKSPACE=${GITHUB_WORKSPACE:-$(pwd)}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "WORKSPACE=$WORKSPACE"
+
+      - name: Build MPAS-A CORE=atmosphere
+        run: |
+          cd $WORKSPACE
+          make gfortran CORE=atmosphere
+
+      - name: Decompress 240km Test Folder & link atmosphere_model
+        run: |
+          cd ${WORKSPACE}
+          tar -xzf .github/workflows/240km.tar.gz
+          cd ${WORKSPACE}/240km
+          ln -sf ../atmosphere_model .
+
+      - name: Run atmosphere with 1 rank
+        run: |
+          cd ${WORKSPACE}/240km
+          mpirun -np 1 ./atmosphere_model 2>&1 | tee log.atmosphere.0000.out
+          #mpirun -np 4 ./atmosphere_model 2>&1 | tee log.atmosphere.0000.out
+
+      - name: Upload atmosphere output
+        uses: actions/upload-artifact@v4
+        with:
+          name: log.atmosphere.0000.out
+          path: 240km/log.atmosphere.0000.out
+
+
+
+
