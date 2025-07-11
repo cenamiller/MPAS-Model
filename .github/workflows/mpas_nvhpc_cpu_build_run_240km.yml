@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-on-libs:
-    name: Build MPAS-A & Run 240km Test with NVIDIA OpenACC
+    name: Build MPAS-A & Run 240km Test with nvhpc for CPU
     runs-on: ubuntu-latest
     container: 
       #image: cmille73/mpas-nvidia:25.3-reduced
@@ -31,7 +31,7 @@ jobs:
         run: |
           cd /container
           chmod +x config_env.sh
-          . ./config_env.sh
+          sourceconfig_env.sh
 
       - name: Build MPAS-A CORE=atmosphere
         run: |
