@@ -23,6 +23,13 @@ jobs:
 
       - name: Set WORKSPACE variable
         run: |
+          echo "code directory"
+          echo $pwd
+          ls
+          cd ..
+          echo "one up directory"
+          echo $pwd
+          ls
           export WORKSPACE=${GITHUB_WORKSPACE:-$(pwd)}
           echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
           echo "WORKSPACE=$WORKSPACE"
