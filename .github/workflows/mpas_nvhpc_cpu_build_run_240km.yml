@@ -27,7 +27,10 @@ jobs:
           echo $pwd
           ls
           cd ..
-          echo "one up directory"
+          echo "up one directory"
+          echo $pwd
+          ls
+          echo "up two directories"
           echo $pwd
           ls
           export WORKSPACE=${GITHUB_WORKSPACE:-$(pwd)}
