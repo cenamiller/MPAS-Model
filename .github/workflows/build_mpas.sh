@@ -16,7 +16,7 @@ source ${SCRIPTDIR}/build_common.cfg || { echo "cannot locate ${SCRIPTDIR}/build
 # curl --retry 3 --retry-delay 5 -sSL https://github.com/MPAS-Dev/MPAS-Model/archive/refs/tags/v${MPAS_VERSION}.tar.gz | tar xz
 # cd ./MPAS-Model-*/
 
-cd ~
+
 echo "building MPAS from $(pwd)"
 
 export PIO_ROOT=${PIO_ROOT:-/container/pio}
