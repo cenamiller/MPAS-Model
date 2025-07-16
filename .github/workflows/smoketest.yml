@@ -2,12 +2,19 @@ name: Build MPAS-A Inside NCAR HPC Development Containers
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-        - workflows
-  pull_request:
-    branches:
-        - workflows
+    inputs:
+        os:
+          description: 'Base OS'
+          type: choice
+          required: true
+          default: almalinux9
+          #options:
+          #  - almalinux8
+          #  - almalinux9
+          #  - almalinux10
+          #  - leap
+          #  - tumbleweed
+          #  - noble
 
 jobs:
 
@@ -15,8 +22,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
-        mpi:      [ openmpi, mpich ]
+        #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
+        compiler: [ nvhpc, gcc]
+        #mpi:      [ openmpi, mpich ]
+        mpi:      [ mpich ]
         gpu:      [ nogpu, cuda ]
         arch:     [ x86_64 ]
 
