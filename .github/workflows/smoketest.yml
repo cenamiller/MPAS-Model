@@ -101,6 +101,7 @@ jobs:
       - name: Build MPAS-A
         continue-on-error: false
         run: |
+          chmod +x .github/workflows/build_mpas.sh
           #export MPAS_VERSION="8.2.2"
           #export DEBUG=true
 
