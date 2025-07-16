@@ -8,13 +8,13 @@ on:
           type: choice
           required: true
           default: almalinux9
-          #options:
-          #  - almalinux8
-          #  - almalinux9
-          #  - almalinux10
-          #  - leap
-          #  - tumbleweed
-          #  - noble
+          options:
+            - almalinux8
+            - almalinux9
+            - almalinux10
+            - leap
+            - tumbleweed
+            - noble
 
 jobs:
 
