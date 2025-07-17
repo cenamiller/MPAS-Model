@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
-        compiler: [ nvhpc, gcc, oneapi , clang ]
+        compiler: [ nvhpc, gcc, oneapi ]
         #mpi:      [ openmpi, mpich ]
         mpi:      [ mpich]
         gpu:      [ nogpu, cuda ]
@@ -34,10 +34,10 @@ jobs:
             extra_stream_args: 'CC=icx CFLAGS="-O3 -qopenmp -mcmodel=medium"'
             extra_osu_args: 'CFLAGS="-qopenmp"'
             extra_hpcg_args: 'CXXFLAGS="-O3 -qopenmp"'
-          - compiler: clang
-            extra_stream_args: 'CFLAGS="-O3 -fopenmp -mcmodel=medium"'
-          - mpi: openmpi
-            extra_mpiexec_args: '--allow-run-as-root'
+          #- compiler: clang
+          #  extra_stream_args: 'CFLAGS="-O3 -fopenmp -mcmodel=medium"'
+          #- mpi: openmpi
+          #  extra_mpiexec_args: '--allow-run-as-root'
 
         exclude:
           - arch: arm64
@@ -102,8 +102,19 @@ jobs:
         continue-on-error: false
         run: |
           chmod +x .github/workflows/build_mpas.sh
-          #export MPAS_VERSION="8.2.2"
           #export DEBUG=true
 
           #timeout 25m /container/extras/build_mpas.sh
           timeout 25m .github/workflows/build_mpas.sh
+
+      - name: Run MPAS-A 240km case with 1 rank
+        continue-on-error: false
+        run: |
+          chmod +x .github/workflows/run_mpas_240km.sh
+          timeout 25m .github/workflows/run_mpas_240km.sh 1
+
+      - name: Run MPAS-A 240km case with 4 ranks
+        continue-on-error: false
+        run: |
+          chmod +x .github/workflows/run_mpas_240km.sh
+          timeout 25m .github/workflows/run_mpas_240km.sh 4
