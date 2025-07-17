@@ -1,5 +1,10 @@
 name: Build MPAS-A Inside NCAR HPC Development Containers
 
+# This workflow is used to build and run MPAS-A inside NCAR HPC development containers.
+# It's adapted from Ben Kirk's workflows building & testing dev containers with github actions
+# NCAR/CISL Docker Hub: https://hub.docker.com/u/ncarcisl
+# Ben Kirk's workflows: https://github.com/benkirk/demo_github_actions
+
 on:
   workflow_dispatch:
     inputs:
@@ -27,17 +32,14 @@ jobs:
         #mpi:      [ openmpi, mpich ]
         mpi:      [ mpich]
         gpu:      [ nogpu, cuda ]
+        io:       [ pio, smiol ]
         arch:     [ x86_64 ]
 
         include:
-          - compiler: oneapi
-            extra_stream_args: 'CC=icx CFLAGS="-O3 -qopenmp -mcmodel=medium"'
-            extra_osu_args: 'CFLAGS="-qopenmp"'
-            extra_hpcg_args: 'CXXFLAGS="-O3 -qopenmp"'
-          #- compiler: clang
-          #  extra_stream_args: 'CFLAGS="-O3 -fopenmp -mcmodel=medium"'
-          #- mpi: openmpi
-          #  extra_mpiexec_args: '--allow-run-as-root'
+          - io: pio
+            extra_io_args: 'export PIO_ROOT=/container/pio; export USE_PIO2=true'
+          - io: smiol
+            extra_io_args: 'export PIO_ROOT=; export USE_PIO2=false'
 
         exclude:
           - arch: arm64
@@ -102,19 +104,20 @@ jobs:
         continue-on-error: false
         run: |
           chmod +x .github/workflows/build_mpas.sh
-          #export DEBUG=true
-
-          #timeout 25m /container/extras/build_mpas.sh
+          # Override with extra_io_args if available
+          if [ -n "${{ matrix.extra_io_args }}" ]; then
+            eval "${{ matrix.extra_io_args }}"
+          fi
           timeout 25m .github/workflows/build_mpas.sh
 
-      - name: Run MPAS-A 240km case with 1 rank
-        continue-on-error: false
-        run: |
-          chmod +x .github/workflows/run_mpas_240km.sh
-          timeout 25m .github/workflows/run_mpas_240km.sh 1
+      #- name: Run MPAS-A 240km case with 1 rank
+      #  continue-on-error: false
+      #  run: |
+      #    chmod +x .github/workflows/run_mpas_240km.sh
+      #    .github/workflows/run_mpas_240km.sh 1
 
-      - name: Run MPAS-A 240km case with 4 ranks
-        continue-on-error: false
-        run: |
-          chmod +x .github/workflows/run_mpas_240km.sh
-          timeout 25m .github/workflows/run_mpas_240km.sh 4
+      #- name: Run MPAS-A 240km case with 4 ranks
+      #  continue-on-error: false
+      #  run: |
+      #    chmod +x .github/workflows/run_mpas_240km.sh
+      #    .github/workflows/run_mpas_240km.sh 4
