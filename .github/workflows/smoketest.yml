@@ -37,9 +37,9 @@ jobs:
 
         include:
           - io: pio
-            extra_io_args: 'export PIO_ROOT=/container/pio; export USE_PIO2=true'
+            extra_io_args: 'export PIO=/container/pio; export USE_PIO2=true'
           - io: smiol
-            extra_io_args: 'export PIO_ROOT=; export USE_PIO2=false'
+            extra_io_args: 'unset PIO; export USE_PIO2=false'
 
         exclude:
           - arch: arm64
