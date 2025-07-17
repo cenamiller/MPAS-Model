@@ -11,8 +11,6 @@ source ${SCRIPTDIR}/build_common.cfg || { echo "cannot locate ${SCRIPTDIR}/build
 
 echo "building MPAS-A in $(pwd)"
 
-#export PIO_ROOT=${PIO_ROOT:-/container/pio}
-
 case "${COMPILER_FAMILY}" in
     "aocc"|"clang")
         compiler_target="llvm"

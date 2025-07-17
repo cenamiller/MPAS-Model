@@ -18,13 +18,11 @@ cd 240km_${NUM_PROCS}/
 ln -sf ../atmosphere_model .
 
 # Modify namelist.atmosphere to change run duration (config_run_duration)
-# from 5 days to 1 day  
-sed -i 's/config_run_duration = '5_00:00:00'/config_run_duration = 1_00:00:00/' namelist.atmosphere
+# from 5 days to half day  
+sed -i "s/config_run_duration = '5_00:00:00'/config_run_duration = '0_12:00:00'/" namelist.atmosphere
 
 
 echo "Running MPAS from $(pwd) on $NUM_PROCS processors"
-
-export PIO_ROOT=${PIO_ROOT:-/container/pio}
 
 # Run the model
 mpirun -n "$NUM_PROCS" ./atmosphere_model
