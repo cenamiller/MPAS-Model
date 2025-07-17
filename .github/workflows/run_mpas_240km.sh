@@ -11,7 +11,8 @@ source ${SCRIPTDIR}/build_common.cfg || { echo "cannot locate ${SCRIPTDIR}/build
 # Accept number of processors as first argument, or use NUM_PROCS env, or default to 1
 NUM_PROCS="${1:-${NUM_PROCS:-1}}"
 
-tar xzf .github/workflows/240km.tar.gz 240km_${NUM_PROCS}
+tar xzf .github/workflows/240km.tar.gz
+mv 240km 240km_${NUM_PROCS}
 cd 240km_${NUM_PROCS}/
 
 ln -sf ../atmosphere_model .
