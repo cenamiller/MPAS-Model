@@ -31,6 +31,6 @@ echo "MPI_IMPL: $MPI_IMPL"
 if [ "$MPI_IMPL" = "openmpi" ]; then
     mpirun -n "$NUM_PROCS" --allow-run-as-root --oversubscribe ./atmosphere_model
 else
-    mpirun -n "$NUM_PROCS" --oversubscribe ./atmosphere_model
+    mpirun -n "$NUM_PROCS" ./atmosphere_model
 fi
 
