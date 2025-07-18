@@ -30,8 +30,8 @@ jobs:
       matrix:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
         compiler: [ nvhpc, gcc, oneapi ]
-        #mpi:      [ openmpi, mpich ]
-        mpi:      [ mpich ]
+        mpi:      [ openmpi, mpich3 ]
+        #mpi:      [ mpich ]
         gpu:      [ nogpu, cuda ]
         io:       [ pio, smiol ]
         arch:     [ x86_64 ]
@@ -123,7 +123,7 @@ jobs:
         if: matrix.gpu == 'nogpu'
         uses: actions/upload-artifact@v4
         with:   
-          name: mpas_240km_1rank_logs_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}_${{ matrix.accel }}_${{ matrix.os }}
+          name: mpas_240km_1rank_logs_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
           path: |
             240km_1/log.*
 
@@ -131,6 +131,6 @@ jobs:
         if: matrix.gpu == 'nogpu'
         uses: actions/upload-artifact@v4
         with:   
-          name: mpas_240km_4rank_logs_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}_${{ matrix.accel }}_${{ matrix.os }}
+          name: mpas_240km_4rank_logs_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
           path: |
             240km_4/log.*
