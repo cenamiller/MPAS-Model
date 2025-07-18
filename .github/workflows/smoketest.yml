@@ -105,11 +105,12 @@ jobs:
           fi
           timeout 25m .github/workflows/build_mpas.sh
 
-      #- name: Run MPAS-A 240km case with 1 rank
-      #  continue-on-error: false
-      #  run: |
-      #    chmod +x .github/workflows/run_mpas_240km.sh
-      #    .github/workflows/run_mpas_240km.sh 1
+      - name: Run MPAS-A 240km case with 1 rank
+        if: matrix.gpu == 'nogpu'
+        continue-on-error: false
+        run: |
+          chmod +x .github/workflows/run_mpas_240km.sh
+          .github/workflows/run_mpas_240km.sh 1
 
       #- name: Run MPAS-A 240km case with 4 ranks
       #  continue-on-error: false
