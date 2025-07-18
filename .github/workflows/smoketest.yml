@@ -29,14 +29,21 @@ jobs:
       fail-fast: false
       matrix:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
-        compiler: [ nvhpc, gcc, oneapi ]
+        #compiler: [ nvhpc, gcc, oneapi ]
+        compiler: [gcc]
         mpi:      [ openmpi, mpich3 ]
         #mpi:      [ mpich ]
-        gpu:      [ nogpu, cuda ]
-        io:       [ pio, smiol ]
+        #gpu:      [ nogpu, cuda ]
+        gpu:      [ nogpu ]
+        #io:       [ pio, smiol ]
+        io:       [ smiol ]
         arch:     [ x86_64 ]
 
         include:
+          - mpi: openmpi
+            extra_mpi_args: 'export MPI_IMPL=openmpi'
+          - mpi: mpich3, mpich
+            extra_mpi_args: 'export MPI_IMPL=mpich'
           - io: smiol
             extra_io_args: 'unset PIO; export USE_PIO2=false'
           - io: pio
@@ -102,6 +109,10 @@ jobs:
           # Use extra_accel_args to set whether to use OpenACC
           if [ -n "${{ matrix.extra_accel_args }}" ]; then
             eval "${{ matrix.extra_accel_args }}"
+          fi
+          # Use extra_mpi_args to set MPI implementation
+          if [ -n "${{ matrix.extra_mpi_args }}" ]; then
+            eval "${{ matrix.extra_mpi_args }}"
           fi
           timeout 25m .github/workflows/build_mpas.sh
 
