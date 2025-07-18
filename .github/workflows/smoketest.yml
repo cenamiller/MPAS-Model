@@ -29,13 +29,11 @@ jobs:
       fail-fast: false
       matrix:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
-        compiler: [ gcc ]
+        compiler: [ nvhpc, gcc ]
         #mpi:      [ openmpi, mpich, mpich3 ]
         mpi:      [ openmpi, mpich3 ]
-        #gpu:      [ nogpu, cuda ]
-        gpu:      [ nogpu ]
-        #io:       [ pio, smiol ]
-        io:       [ smiol ]
+        gpu:      [ nogpu, cuda ]
+        io:       [ pio, smiol ]
         arch:     [ x86_64 ]
 
         include:
@@ -45,11 +43,11 @@ jobs:
             extra_mpi_args: 'export MPI_IMPL=mpich'
           - io: smiol
             extra_io_args: 'unset PIO; export USE_PIO2=false'
-          #- io: pio
-          #  extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
-          #- compiler: nvhpc
-          #  gpu: cuda
-          #  extra_accel_args: 'export OPENACC=true'
+          - io: pio
+            extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
+          - compiler: nvhpc
+            gpu: cuda
+            extra_accel_args: 'export OPENACC=true'
 
 
     name: Build MPAS-A

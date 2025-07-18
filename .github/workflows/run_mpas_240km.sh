@@ -26,10 +26,11 @@ echo "Running MPAS from $(pwd) on $NUM_PROCS processors"
 echo "MPI_IMPL: $MPI_IMPL"
 
 # Run the model
-# allow-run-as-root is needed for openmpi to run on github actions as root
+
+# allow-run-as-root flag is needed for openmpi to run on github actions as root
 if [ "$MPI_IMPL" = "openmpi" ]; then
-    mpirun -n "$NUM_PROCS" --allow-run-as-root ./atmosphere_model
+    mpirun -n "$NUM_PROCS" --allow-run-as-root --oversubscribe ./atmosphere_model
 else
-    mpirun -n "$NUM_PROCS" ./atmosphere_model
+    mpirun -n "$NUM_PROCS" --oversubscribe ./atmosphere_model
 fi
 
