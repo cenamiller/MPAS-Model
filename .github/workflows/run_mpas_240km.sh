@@ -23,6 +23,7 @@ sed -i "s/config_run_duration = '5_00:00:00'/config_run_duration = '0_06:00:00'/
 
 
 echo "Running MPAS from $(pwd) on $NUM_PROCS processors"
+echo "MPI_IMPL: $MPI_IMPL"
 
 # Run the model
 # allow-run-as-root is needed for openmpi to run on github actions as root

@@ -109,16 +109,16 @@ jobs:
           if [ -n "${{ matrix.extra_accel_args }}" ]; then
             eval "${{ matrix.extra_accel_args }}"
           fi
-          # Use extra_mpi_args to set MPI implementation
-          if [ -n "${{ matrix.extra_mpi_args }}" ]; then
-            eval "${{ matrix.extra_mpi_args }}"
-          fi
           timeout 25m .github/workflows/build_mpas.sh
 
       - name: Run MPAS-A 240km case with 1 rank
         if: matrix.gpu == 'nogpu'
         continue-on-error: true
         run: |
+          # Use extra_mpi_args to set MPI implementation
+          if [ -n "${{ matrix.extra_mpi_args }}" ]; then
+            eval "${{ matrix.extra_mpi_args }}"
+          fi
           chmod +x .github/workflows/run_mpas_240km.sh
           .github/workflows/run_mpas_240km.sh 1
 
@@ -126,6 +126,10 @@ jobs:
         if: matrix.gpu == 'nogpu'
         continue-on-error: true
         run: |
+          # Use extra_mpi_args to set MPI implementation
+          if [ -n "${{ matrix.extra_mpi_args }}" ]; then
+            eval "${{ matrix.extra_mpi_args }}"
+          fi
           chmod +x .github/workflows/run_mpas_240km.sh
           .github/workflows/run_mpas_240km.sh 4
 
