@@ -31,7 +31,7 @@ jobs:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
         compiler: [ nvhpc, gcc, oneapi ]
         #mpi:      [ openmpi, mpich ]
-        mpi:      [ mpich]
+        mpi:      [ mpich ]
         gpu:      [ nogpu, cuda ]
         io:       [ pio, smiol ]
         arch:     [ x86_64 ]
@@ -107,13 +107,30 @@ jobs:
 
       - name: Run MPAS-A 240km case with 1 rank
         if: matrix.gpu == 'nogpu'
-        continue-on-error: false
+        continue-on-error: true
         run: |
           chmod +x .github/workflows/run_mpas_240km.sh
           .github/workflows/run_mpas_240km.sh 1
 
-      #- name: Run MPAS-A 240km case with 4 ranks
-      #  continue-on-error: false
-      #  run: |
-      #    chmod +x .github/workflows/run_mpas_240km.sh
-      #    .github/workflows/run_mpas_240km.sh 4
+      - name: Run MPAS-A 240km case with 4 ranks
+        if: matrix.gpu == 'nogpu'
+        continue-on-error: true
+        run: |
+          chmod +x .github/workflows/run_mpas_240km.sh
+          .github/workflows/run_mpas_240km.sh 4
+
+      - name: Upload 1 rank log files
+        if: matrix.gpu == 'nogpu'
+        uses: actions/upload-artifact@v4
+        with:   
+          name: mpas_240km_1rank_logs_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}_${{ matrix.accel }}_${{ matrix.os }}
+          path: |
+            240km_1/log.*
+
+      - name: Upload 4 rank log files
+        if: matrix.gpu == 'nogpu'
+        uses: actions/upload-artifact@v4
+        with:   
+          name: mpas_240km_4rank_logs_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}_${{ matrix.accel }}_${{ matrix.os }}
+          path: |
+            240km_4/log.*
