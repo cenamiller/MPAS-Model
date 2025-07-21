@@ -8,7 +8,7 @@ SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source ${SCRIPTDIR}/build_common.cfg || { echo "cannot locate ${SCRIPTDIR}/build_common.cfg!!"; exit 1; }
 #----------------------------------------------------------------------------
 
-# Accept number of processors as first argument, or use NUM_PROCS env, or default to 1
+# Accept number of processors as first argument, or use NUM_PROCS env, and default to 1
 NUM_PROCS="${1:-${NUM_PROCS:-1}}"
 
 tar xzf .github/workflows/240km.tar.gz
@@ -29,8 +29,8 @@ echo "MPI_IMPL: $MPI_IMPL"
 
 # allow-run-as-root flag is needed for openmpi to run on github actions as root
 if [ "$MPI_IMPL" = "openmpi" ]; then
-    mpirun -n "$NUM_PROCS" --allow-run-as-root --oversubscribe ./atmosphere_model
+    mpirun -n "$NUM_PROCS" --allow-run-as-root --oversubscribe ./atmosphere_model 2>&1 | tee log.atmosphere.0000.out
 else
-    mpirun -n "$NUM_PROCS" ./atmosphere_model
+    mpirun -n "$NUM_PROCS" ./atmosphere_model 2>&1 | tee log.atmosphere.0000.out
 fi
 

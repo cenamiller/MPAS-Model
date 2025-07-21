@@ -99,36 +99,65 @@ jobs:
         continue-on-error: false
         run: |
           chmod +x .github/workflows/build_mpas.sh
+
           # Use extra_io_args to set whether to use PIO or SMIOL
           if [ -n "${{ matrix.extra_io_args }}" ]; then
             eval "${{ matrix.extra_io_args }}"
           fi
+
           # Use extra_accel_args to set whether to use OpenACC
           if [ -n "${{ matrix.extra_accel_args }}" ]; then
             eval "${{ matrix.extra_accel_args }}"
           fi
           timeout 25m .github/workflows/build_mpas.sh
 
+      - name: upload atmosphere_model executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: atmosphere_model-${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
+          path: atmosphere_model
+  
+  run-mpas-240km:
+    needs: build-run-mpas
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -elo pipefail {0}
+
+    container:
+      image: ncarcisl/cisldev-${{ matrix.arch }}-${{ inputs.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}:devel
+    
+    steps:
+      - name: Download atmosphere_model executable
+        uses: actions/download-artifact@v4
+        with:
+          name: atmosphere_model-${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
+          path: atmosphere_model
+
       - name: Run MPAS-A 240km case with 1 rank
         if: matrix.gpu == 'nogpu'
         continue-on-error: true
         run: |
+          chmod +x .github/workflows/run_mpas_240km.sh
+
           # Use extra_mpi_args to set MPI implementation
           if [ -n "${{ matrix.extra_mpi_args }}" ]; then
             eval "${{ matrix.extra_mpi_args }}"
           fi
-          chmod +x .github/workflows/run_mpas_240km.sh
+          
           .github/workflows/run_mpas_240km.sh 1
 
       - name: Run MPAS-A 240km case with 4 ranks
         if: matrix.gpu == 'nogpu'
         continue-on-error: true
         run: |
+          chmod +x .github/workflows/run_mpas_240km.sh
+
           # Use extra_mpi_args to set MPI implementation
           if [ -n "${{ matrix.extra_mpi_args }}" ]; then
             eval "${{ matrix.extra_mpi_args }}"
           fi
-          chmod +x .github/workflows/run_mpas_240km.sh
+          
           .github/workflows/run_mpas_240km.sh 4
 
       - name: Upload 1 rank log files
