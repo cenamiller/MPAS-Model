@@ -17,9 +17,11 @@ cd 240km_${NUM_PROCS}/
 
 ln -sf ../atmosphere_model .
 
-# Modify namelist.atmosphere to change run duration (config_run_duration)
-# from 5 days to quarter day  
-sed -i "s/config_run_duration = '5_00:00:00'/config_run_duration = '0_06:00:00'/" namelist.atmosphere
+# Modify namelist.atmosphere to change run duration (config_run_duration) to 6 hours
+sed -i "s/config_run_duration = '[^']*'/config_run_duration = '0_06:00:00'/" namelist.atmosphere
+
+# Modify streams.atmosphere to change restart output_interval to 6 hours
+sed -i '/<immutable_stream name="restart"/,/\/>/ s/output_interval="[^"]*"/output_interval="0_06:00:00"/' streams.atmosphere
 
 
 echo "Running MPAS from $(pwd) on $NUM_PROCS processors"
