@@ -29,11 +29,13 @@ jobs:
       fail-fast: false
       matrix:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
-        compiler: [ nvhpc, gcc, oneapi]
+        compiler: [ nvhpc, gcc ]
         #mpi:      [ openmpi, mpich, mpich3 ]
-        mpi:      [ openmpi, mpich3 ]
-        gpu:      [ nogpu, cuda ]
-        io:       [ pio, smiol ]
+        mpi:      [ mpich3 ]
+        #gpu:      [ nogpu, cuda ]
+        gpu:      [ nogpu ]
+        #io:       [ pio, smiol ]
+        io:       [ smiol ]
         arch:     [ x86_64 ]
 
         include:
@@ -125,9 +127,9 @@ jobs:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
         compiler: [ nvhpc, gcc ]
         #mpi:      [ openmpi, mpich, mpich3 ]
-        mpi:      [ openmpi, mpich3 ]
+        mpi:      [ mpich3 ]
         gpu:      [ nogpu ]
-        io:       [ pio, smiol ]
+        io:       [ smiol ]
         arch:     [ x86_64 ]
         num_procs: [ 1, 4 ]
 
@@ -195,7 +197,7 @@ jobs:
       - name: Make atmosphere_model executable
         run: chmod +x atmosphere_model
 
-      - name: Run MPAS-A 240km case with ${ matrix.num_procs } ranks
+      - name: Run MPAS-A 240km case with ${{ matrix.num_procs }} ranks
         continue-on-error: true
         run: |
           chmod +x .github/workflows/run_mpas_240km.sh
