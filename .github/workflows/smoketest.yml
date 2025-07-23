@@ -201,27 +201,31 @@ jobs:
       - name: Run MPAS-A 240km case with ${{ matrix.num_procs }} ranks
         run: |
           chmod +x .github/workflows/run_mpas_240km.sh
+
           # Use extra_mpi_args to set MPI implementation
           if [ -n "${{ matrix.extra_mpi_args }}" ]; then
             eval "${{ matrix.extra_mpi_args }}"
           fi
           .github/workflows/run_mpas_240km.sh ${{ matrix.num_procs }}
 
-      - name: Upload restart files
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mpas_240km_${{ matrix.num_procs }}rank_restart_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
-          path: |
-            240km_${{ matrix.num_procs }}/restart.*
+      - name: Print log.atmosphere.0000.out
+        if: always()
+        run: |
+          cat log.atmosphere.0000.out
 
-      - name: Upload log anderror files
+      - name: Print log.atmosphere.0000.err
+        if: always()
+        run: |
+          cat log.atmosphere.0000.err
+
+      - name: Upload log and error files
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mpas_240km_${{ matrix.num_procs }}rank_error_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
           path: |
             240km_${{ matrix.num_procs }}/
+            restart.*
             *.log
             *.err
             *.out

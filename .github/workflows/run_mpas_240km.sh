@@ -28,5 +28,8 @@ echo "Running MPAS from $(pwd) on $NUM_PROCS processors"
 echo "MPI_FLAGS: $MPI_FLAGS"
 
 # Run the model with MPI flags
-mpirun -n "$NUM_PROCS" $MPI_FLAGS ./atmosphere_model 2>&1 | tee log.atmosphere.0000.out
+# Use pipefail to ensure the script fails if mpirun fails
+set -o pipefail
+
+mpirun -n "$NUM_PROCS" $MPI_FLAGS ./atmosphere_model
 
