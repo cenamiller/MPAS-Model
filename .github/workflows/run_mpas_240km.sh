@@ -25,14 +25,8 @@ sed -i '/<immutable_stream name="restart"/,/\/>/ s/output_interval="[^"]*"/outpu
 
 
 echo "Running MPAS from $(pwd) on $NUM_PROCS processors"
-echo "MPI_IMPL: $MPI_IMPL"
+echo "MPI_FLAGS: $MPI_FLAGS"
 
-# Run the model
-
-# allow-run-as-root flag is needed for openmpi to run on github actions as root
-if [ "$MPI_IMPL" = "openmpi" ]; then
-    mpirun -n "$NUM_PROCS" --allow-run-as-root --oversubscribe ./atmosphere_model 
-else
-    mpirun -n "$NUM_PROCS" ./atmosphere_model 
-fi
+# Run the model with MPI flags
+mpirun -n "$NUM_PROCS" $MPI_FLAGS ./atmosphere_model 2>&1 | tee log.atmosphere.0000.out
 

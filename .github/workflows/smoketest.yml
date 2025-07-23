@@ -30,21 +30,19 @@ jobs:
       matrix:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
         compiler: [ nvhpc, gcc ]
-        #mpi:      [ openmpi, mpich, mpich3 ]
-        mpi:      [ mpich3 ]
+        mpi:      [ mpich, mpich3 ]
         #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
-        #io:       [ pio, smiol ]
-        io:       [ smiol ]
+        io:       [ pio, smiol ]
         arch:     [ x86_64 ]
 
         include:
           #- mpi: openmpi
-          #  extra_mpi_args: 'export MPI_IMPL=openmpi'
-          - mpi: mpich3
-            extra_mpi_args: 'export MPI_IMPL=mpich'
-          - io: smiol
-            extra_io_args: 'unset PIO; export USE_PIO2=false'
+          #  extra_mpi_args: 'export MPI_FLAGS="--allow-run-as-root --oversubscribe"'
+          - mpi: mpich3, mpich
+            extra_mpi_args: 'export MPI_FLAGS=""'
+          - io: smiol, pio
+            extra_io_args: 'unset PIO'
           #- io: pio
           #  extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
           #- compiler: nvhpc
@@ -100,7 +98,7 @@ jobs:
       - name: Build MPAS-A
         continue-on-error: false
         run: |
-          chmod +x .github/workflows/build_mpas.sh
+          #chmod +x .github/workflows/build_mpas.sh
 
           # Use extra_io_args to set whether to use PIO or SMIOL
           if [ -n "${{ matrix.extra_io_args }}" ]; then
@@ -126,20 +124,19 @@ jobs:
       matrix:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
         compiler: [ nvhpc, gcc ]
-        #mpi:      [ openmpi, mpich, mpich3 ]
-        mpi:      [ mpich3 ]
+        mpi:      [ mpich, mpich3 ]
         gpu:      [ nogpu ]
-        io:       [ smiol ]
+        io:       [ smiol, pio ]
         arch:     [ x86_64 ]
         num_procs: [ 1, 4 ]
 
         include:
           #- mpi: openmpi
-          #  extra_mpi_args: 'export MPI_IMPL=openmpi'
-          - mpi: mpich3
-            extra_mpi_args: 'export MPI_IMPL=mpich'
+          #  extra_mpi_args: 'export MPI_FLAGS="--allow-run-as-root --oversubscribe"'
+          - mpi: mpich3, mpich
+            extra_mpi_args: 'export MPI_FLAGS=""'
           - io: smiol
-            extra_io_args: 'unset PIO; export USE_PIO2=false'
+            extra_io_args: 'unset PIO'
           #- io: pio
           #  extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
 
@@ -198,25 +195,31 @@ jobs:
         run: chmod +x atmosphere_model
 
       - name: Run MPAS-A 240km case with ${{ matrix.num_procs }} ranks
-        continue-on-error: true
         run: |
-          chmod +x .github/workflows/run_mpas_240km.sh
+          #chmod +x .github/workflows/run_mpas_240km.sh
           # Use extra_mpi_args to set MPI implementation
           if [ -n "${{ matrix.extra_mpi_args }}" ]; then
             eval "${{ matrix.extra_mpi_args }}"
           fi
           .github/workflows/run_mpas_240km.sh ${{ matrix.num_procs }}
 
-      - name: Upload log files
-        uses: actions/upload-artifact@v4
-        with:
-          name: mpas_240km_${{ matrix.num_procs }}rank_logs_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
-          path: |
-            240km_${{ matrix.num_procs }}/log.*
-
       - name: Upload restart files
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: mpas_240km_${{ matrix.num_procs }}rank_restart_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
           path: |
             240km_${{ matrix.num_procs }}/restart.*
+
+      - name: Upload log anderror files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpas_240km_${{ matrix.num_procs }}rank_error_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
+          path: |
+            240km_${{ matrix.num_procs }}/
+            *.log
+            *.err
+            *.out
+
+
