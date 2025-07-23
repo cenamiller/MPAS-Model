@@ -211,12 +211,12 @@ jobs:
       - name: Print log.atmosphere.0000.out
         if: always()
         run: |
-          cat log.atmosphere.0000.out
+          cat 240km_${{ matrix.num_procs }}/log.atmosphere.0000.out
 
       - name: Print log.atmosphere.0000.err
         if: always()
         run: |
-          cat log.atmosphere.0000.err
+          cat 240km_${{ matrix.num_procs }}/log.atmosphere.0000.err
 
       - name: Upload log and error files
         if: always()
