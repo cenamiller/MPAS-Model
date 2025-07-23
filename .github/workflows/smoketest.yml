@@ -39,12 +39,14 @@ jobs:
         include:
           #- mpi: openmpi
           #  extra_mpi_args: 'export MPI_FLAGS="--allow-run-as-root --oversubscribe"'
-          - mpi: mpich3, mpich
+          - mpi: mpich3
             extra_mpi_args: 'export MPI_FLAGS=""'
-          - io: smiol, pio
+          - mpi: mpich
+            extra_mpi_args: 'export MPI_FLAGS=""'
+          - io: smiol
             extra_io_args: 'unset PIO'
-          #- io: pio
-          #  extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
+          - io: pio
+            extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
           #- compiler: nvhpc
           #  gpu: cuda
           #  extra_accel_args: 'export OPENACC=true'
@@ -133,12 +135,14 @@ jobs:
         include:
           #- mpi: openmpi
           #  extra_mpi_args: 'export MPI_FLAGS="--allow-run-as-root --oversubscribe"'
-          - mpi: mpich3, mpich
+          - mpi: mpich3
+            extra_mpi_args: 'export MPI_FLAGS=""'
+          - mpi: mpich
             extra_mpi_args: 'export MPI_FLAGS=""'
           - io: smiol
             extra_io_args: 'unset PIO'
-          #- io: pio
-          #  extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
+          - io: pio
+            extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
 
     needs: build-run-mpas
     runs-on: ubuntu-latest
