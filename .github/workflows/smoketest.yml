@@ -100,7 +100,7 @@ jobs:
       - name: Build MPAS-A
         continue-on-error: false
         run: |
-          #chmod +x .github/workflows/build_mpas.sh
+          chmod +x .github/workflows/build_mpas.sh
 
           # Use extra_io_args to set whether to use PIO or SMIOL
           if [ -n "${{ matrix.extra_io_args }}" ]; then
@@ -200,7 +200,7 @@ jobs:
 
       - name: Run MPAS-A 240km case with ${{ matrix.num_procs }} ranks
         run: |
-          #chmod +x .github/workflows/run_mpas_240km.sh
+          chmod +x .github/workflows/run_mpas_240km.sh
           # Use extra_mpi_args to set MPI implementation
           if [ -n "${{ matrix.extra_mpi_args }}" ]; then
             eval "${{ matrix.extra_mpi_args }}"
