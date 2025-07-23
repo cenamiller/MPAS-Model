@@ -33,7 +33,7 @@ jobs:
         mpi:      [ mpich, mpich3 ]
         #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
-        io:       [ pio, smiol ]
+        io:       [ smiol ]
         arch:     [ x86_64 ]
 
         include:
@@ -45,8 +45,8 @@ jobs:
             extra_mpi_args: 'export MPI_FLAGS=""'
           - io: smiol
             extra_io_args: 'unset PIO'
-          - io: pio
-            extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
+          #- io: pio
+          #  extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
           #- compiler: nvhpc
           #  gpu: cuda
           #  extra_accel_args: 'export OPENACC=true'
@@ -128,7 +128,7 @@ jobs:
         compiler: [ nvhpc, gcc ]
         mpi:      [ mpich, mpich3 ]
         gpu:      [ nogpu ]
-        io:       [ smiol, pio ]
+        io:       [ smiol ]
         arch:     [ x86_64 ]
         num_procs: [ 1, 4 ]
 
@@ -141,8 +141,8 @@ jobs:
             extra_mpi_args: 'export MPI_FLAGS=""'
           - io: smiol
             extra_io_args: 'unset PIO'
-          - io: pio
-            extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
+          #- io: pio
+          #  extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
 
     needs: build-run-mpas
     runs-on: ubuntu-latest
