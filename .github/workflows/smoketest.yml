@@ -209,7 +209,12 @@ jobs:
       - name: Print log.atmosphere.0000.err
         if: always()
         run: |
-          cat 240km_${{ matrix.num_procs }}/log.atmosphere.0000.err
+          # check if log.atmosphere.0000.err exists
+          if [ -f 240km_${{ matrix.num_procs }}/log.atmosphere.0000.err ]; then
+            cat 240km_${{ matrix.num_procs }}/log.atmosphere.0000.err
+          else
+            echo "log.atmosphere.0000.err not created"
+          fi
 
       - name: Upload log and error files
         if: always()
