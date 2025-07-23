@@ -24,7 +24,7 @@ on:
 
 jobs:
 
-  build-run-mpas:
+  build-mpas:
     strategy:
       fail-fast: false
       matrix:
@@ -144,7 +144,7 @@ jobs:
           #- io: pio
           #  extra_io_args: 'export PIO_ROOT=${PIO_ROOT:-/container/pio}; export USE_PIO2=true'
 
-    needs: build-run-mpas
+    needs: build-mpas
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -189,14 +189,7 @@ jobs:
           which mpicc
           mpicc --version 2>/dev/null || true
 
-      - name: Download atmosphere_model executable
-        uses: actions/download-artifact@v4
-        with:
-          name: atmosphere_model-${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
-          path: 
 
-      - name: Make atmosphere_model executable
-        run: chmod +x atmosphere_model
 
       - name: Run MPAS-A 240km case with ${{ matrix.num_procs }} ranks
         run: |
@@ -229,5 +222,105 @@ jobs:
             *.log
             *.err
             *.out
+
+  coverage-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ gcc ]
+        mpi:      [ openmpi ]
+        gpu:      [ nogpu ]
+        io:       [ smiol ]
+        arch:     [ x86_64 ]
+        num_procs: [ 1 ]
+
+        include:
+          - mpi: openmpi
+            extra_mpi_args: 'export MPI_FLAGS="--allow-run-as-root --oversubscribe"'
+          - io: smiol
+            extra_io_args: 'unset PIO'
+
+    needs: build-mpas
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -elo pipefail {0}
+
+    container:
+      image: ncarcisl/cisldev-${{ matrix.arch }}-${{ inputs.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}:devel
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+          fetch-depth: 0
+
+      - name: Install coverage tools
+        run: |
+          # Install lcov for coverage report generation
+          if command -v yum &> /dev/null; then
+            yum install -y lcov
+          elif command -v apt-get &> /dev/null; then
+            apt-get update && apt-get install -y lcov
+          else
+            echo "Package manager not found, trying to install lcov manually"
+          fi
+
+      - name: Download atmosphere_model executable
+        uses: actions/download-artifact@v4
+        with:
+          name: atmosphere_model-${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
+          path: 
+
+      - name: Make atmosphere_model executable
+        run: chmod +x atmosphere_model
+
+      - name: Build MPAS-A with coverage
+        run: |
+          chmod +x .github/workflows/build_mpas_coverage.sh
+
+          # Use extra_io_args to set whether to use PIO or SMIOL
+          if [ -n "${{ matrix.extra_io_args }}" ]; then
+            eval "${{ matrix.extra_io_args }}"
+          fi
+
+          # Use extra_accel_args to set whether to use OpenACC
+          if [ -n "${{ matrix.extra_accel_args }}" ]; then
+            eval "${{ matrix.extra_accel_args }}"
+          fi
+          timeout 25m .github/workflows/build_mpas_coverage.sh
+
+      - name: Run MPAS-A with code coverage test
+        run: |
+          chmod +x .github/workflows/run_mpas_240km.sh
+
+          # Use extra_mpi_args to set MPI implementation
+          if [ -n "${{ matrix.extra_mpi_args }}" ]; then
+            eval "${{ matrix.extra_mpi_args }}"
+          fi
+          .github/workflows/run_mpas_240km.sh ${{ matrix.num_procs }}
+
+      - name: Generate coverage report
+        if: always()
+        run: |
+          cd 240km_${{ matrix.num_procs }}
+          
+          # Collect coverage data from build directory
+          lcov --capture --directory ../build --output-file coverage.info
+          
+          # Generate HTML report
+          genhtml coverage.info --output-directory coverage_report
+          
+          # Generate summary
+          lcov --summary coverage.info
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage_report_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
+          path: |
+            240km_${{ matrix.num_procs }}/coverage_report/
+            240km_${{ matrix.num_procs }}/coverage.info
 
 
