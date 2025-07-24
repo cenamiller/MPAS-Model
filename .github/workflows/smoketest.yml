@@ -199,14 +199,14 @@ jobs:
           which cmake && cmake --version 2>/dev/null || echo "cmake: not available"
           which make && make --version 2>/dev/null | head -1 || echo "make: not available"
 
-       - name: Download atmosphere_model executable
-         uses: actions/download-artifact@v4
-         with:
-           name: atmosphere_model-${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
-           path: atmosphere_model
+      - name: Download atmosphere_model executable
+        uses: actions/download-artifact@v4
+        with:
+          name: atmosphere_model-${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
+          path: atmosphere_model
 
-       - name: Make atmosphere_model executable
-         run: chmod +x atmosphere_model
+      - name: Make atmosphere_model executable
+        run: chmod +x atmosphere_model
 
       - name: Run MPAS-A 240km case with ${{ matrix.num_procs }} ranks
         run: |
