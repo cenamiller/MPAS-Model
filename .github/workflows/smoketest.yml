@@ -203,7 +203,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: atmosphere_model-${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
-          path: atmosphere_model
+          path: 
 
       - name: Make atmosphere_model executable
         run: chmod +x atmosphere_model
@@ -278,7 +278,18 @@ jobs:
         run: |
           # Install lcov for coverage report generation
           if command -v yum &> /dev/null; then
-            yum install -y lcov
+            # Try to install lcov from EPEL or build from source
+            yum install -y epel-release || true
+            yum install -y lcov || {
+              echo "lcov not available in repositories, installing from source..."
+              yum install -y gcc-c++ make
+              cd /tmp
+              curl -L -o lcov-1.16.tar.gz https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16.tar.gz
+              tar xzf lcov-1.16.tar.gz
+              cd lcov-1.16
+              make install PREFIX=/usr/local
+              cd /
+            }
           elif command -v apt-get &> /dev/null; then
             apt-get update && apt-get install -y lcov
           else
