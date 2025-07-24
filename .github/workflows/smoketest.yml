@@ -237,7 +237,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mpas_240km_${{ matrix.num_procs }}rank_error_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
+          name: mpas_240km_${{ matrix.num_procs }}rank_run_output_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
           path: |
             240km_${{ matrix.num_procs }}/
             restart.*
@@ -250,15 +250,13 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [ gcc ]
-        mpi:      [ openmpi ]
+        mpi:      [ mpich3 ]
         gpu:      [ nogpu ]
         io:       [ smiol ]
         arch:     [ x86_64 ]
         num_procs: [ 1 ]
 
         include:
-          - mpi: openmpi
-            extra_mpi_args: 'export MPI_FLAGS="--allow-run-as-root --oversubscribe"'
           - io: smiol
             extra_io_args: 'unset PIO'
 
