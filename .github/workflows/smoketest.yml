@@ -63,25 +63,24 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-          fetch-depth: 0
 
       - name: Interrogate Runtime Environment
         run: |
-          pwd
-          ls
-          find -type d
-          env
+          echo "=== Container Environment ==="
           cat /container/config_env.sh
-          df -h
-          cat /etc/os-release 2>/dev/null || true
+          echo
+          echo "=== System Information ==="
+          pwd
+          echo "Container OS:"
+          cat /etc/os-release 2>/dev/null || echo "OS info not available"
           uname -a
-          lscpu
-          nvidia-smi 2>/dev/null || true
-          echo && echo && echo
-          echo '----------------------------------------------------------------'
-          echo && echo && echo
+          echo
+          echo "=== Hardware Information ==="
+          lscpu | head -10
+          nvidia-smi 2>/dev/null || echo "No NVIDIA GPU detected"
+          df -h | head -5
+          echo
+          echo "=== Compiler Information ==="
           echo "CC=${CC}"
           echo "CXX=${CXX}"
           echo "FC=${FC}"
@@ -93,9 +92,13 @@ jobs:
           echo "FCFLAGS=${FCFLAGS}"
           echo "F77FLAGS=${F77FLAGS}"
           export CC CXX FC F77 CFLAGS CXXFLAGS FCFLAGS F77FLAGS CPPFLAGS
-          which conda 2>/dev/null && conda --version || echo " --> no conda in this container"
-          which mpicc
-          mpicc --version 2>/dev/null || true
+          echo
+          echo "=== Library Versions ==="
+          which conda 2>/dev/null && conda --version || echo "conda: not available"
+          which mpicc && mpicc --version 2>/dev/null || echo "mpicc: not available"
+          which mpirun && mpirun --version 2>/dev/null || echo "mpirun: not available"
+          which cmake && cmake --version 2>/dev/null || echo "cmake: not available"
+          which make && make --version 2>/dev/null | head -1 || echo "make: not available"
 
       - name: Build MPAS-A
         continue-on-error: false
@@ -121,6 +124,10 @@ jobs:
   
   run-mpas-240km:
 
+    # The run-mpas-240km matrix needs to be a subset of the build-mpas matrix
+    # at this time
+
+    
     strategy:
       fail-fast: false
       matrix:
@@ -161,19 +168,21 @@ jobs:
 
       - name: Interrogate Runtime Environment
         run: |
-          pwd
-          ls
-          find -type d
-          env
+          echo "=== Container Environment ==="
           cat /container/config_env.sh
-          df -h
-          cat /etc/os-release 2>/dev/null || true
+          echo
+          echo "=== System Information ==="
+          pwd
+          echo "Container OS:"
+          cat /etc/os-release 2>/dev/null || echo "OS info not available"
           uname -a
-          lscpu
-          nvidia-smi 2>/dev/null || true
-          echo && echo && echo
-          echo '----------------------------------------------------------------'
-          echo && echo && echo
+          echo
+          echo "=== Hardware Information ==="
+          lscpu | head -10
+          nvidia-smi 2>/dev/null || echo "No NVIDIA GPU detected"
+          df -h | head -5
+          echo
+          echo "=== Compiler Information ==="
           echo "CC=${CC}"
           echo "CXX=${CXX}"
           echo "FC=${FC}"
@@ -185,9 +194,13 @@ jobs:
           echo "FCFLAGS=${FCFLAGS}"
           echo "F77FLAGS=${F77FLAGS}"
           export CC CXX FC F77 CFLAGS CXXFLAGS FCFLAGS F77FLAGS CPPFLAGS
-          which conda 2>/dev/null && conda --version || echo " --> no conda in this container"
-          which mpicc
-          mpicc --version 2>/dev/null || true
+          echo
+          echo "=== Library Versions ==="
+          which conda 2>/dev/null && conda --version || echo "conda: not available"
+          which mpicc && mpicc --version 2>/dev/null || echo "mpicc: not available"
+          which mpirun && mpirun --version 2>/dev/null || echo "mpirun: not available"
+          which cmake && cmake --version 2>/dev/null || echo "cmake: not available"
+          which make && make --version 2>/dev/null | head -1 || echo "make: not available"
 
 
 
@@ -256,9 +269,6 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-          fetch-depth: 0
 
       - name: Install coverage tools
         run: |
@@ -271,18 +281,9 @@ jobs:
             echo "Package manager not found, trying to install lcov manually"
           fi
 
-      - name: Download atmosphere_model executable
-        uses: actions/download-artifact@v4
-        with:
-          name: atmosphere_model-${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
-          path: 
-
-      - name: Make atmosphere_model executable
-        run: chmod +x atmosphere_model
-
       - name: Build MPAS-A with coverage
         run: |
-          chmod +x .github/workflows/build_mpas_coverage.sh
+          chmod +x .github/workflows/build_mpas.sh
 
           # Use extra_io_args to set whether to use PIO or SMIOL
           if [ -n "${{ matrix.extra_io_args }}" ]; then
@@ -293,7 +294,13 @@ jobs:
           if [ -n "${{ matrix.extra_accel_args }}" ]; then
             eval "${{ matrix.extra_accel_args }}"
           fi
-          timeout 25m .github/workflows/build_mpas_coverage.sh
+
+          # Set coverage compilation flags
+          export CFLAGS="${CFLAGS} -fprofile-arcs -ftest-coverage"
+          export CXXFLAGS="${CXXFLAGS} -fprofile-arcs -ftest-coverage"
+          export FCFLAGS="${FCFLAGS} -fprofile-arcs -ftest-coverage"
+          export LDFLAGS="${LDFLAGS} -lgcov"
+          timeout 25m .github/workflows/build_mpas.sh
 
       - name: Run MPAS-A with code coverage test
         run: |
