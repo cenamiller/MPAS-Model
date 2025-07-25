@@ -212,6 +212,9 @@ jobs:
         run: |
           chmod +x .github/workflows/run_mpas_240km.sh
 
+          export RUN_DURATION="0_06:00:00"
+          export RESTART_INTERVAL="0_06:00:00"
+
           # Use extra_mpi_args to set MPI implementation
           if [ -n "${{ matrix.extra_mpi_args }}" ]; then
             eval "${{ matrix.extra_mpi_args }}"
@@ -318,6 +321,8 @@ jobs:
       - name: Run MPAS-A with code coverage test
         run: |
           chmod +x .github/workflows/run_mpas_240km.sh
+          export RUN_DURATION="0_01:00:00"
+          export RESTART_INTERVAL="0_01:00:00"
 
           # Use extra_mpi_args to set MPI implementation
           if [ -n "${{ matrix.extra_mpi_args }}" ]; then
@@ -330,8 +335,8 @@ jobs:
         run: |
           cd 240km_${{ matrix.num_procs }}
           
-          # Collect coverage data from build directory
-          lcov --capture --directory ../build --output-file coverage.info
+          # Collect coverage data from root directory (where make built the code)
+          lcov --capture --directory .. --output-file coverage.info
           
           # Generate HTML report
           genhtml coverage.info --output-directory coverage_report
