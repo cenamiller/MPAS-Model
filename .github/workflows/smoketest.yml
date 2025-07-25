@@ -233,7 +233,7 @@ jobs:
             echo "log.atmosphere.0000.err not created"
           fi
 
-      - name: Upload log and error files
+      - name: Upload log and error and restart files
         if: always()
         uses: actions/upload-artifact@v4
         with:
