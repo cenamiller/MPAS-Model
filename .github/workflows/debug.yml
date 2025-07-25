@@ -30,7 +30,7 @@ jobs:
       matrix:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
         compiler: [ nvhpc, gcc ]
-        mpi:      [ mpich, mpich3, oneapi ]
+        mpi:      [ mpich, mpich3, openmpi ]
         #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
         io:       [ smiol ]
@@ -127,7 +127,7 @@ jobs:
       matrix:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
         compiler: [ nvhpc, gcc ]
-        mpi:      [ mpich, mpich3, oneapi]
+        mpi:      [ mpich, mpich3, openmpi]
         gpu:      [ nogpu ]
         io:       [ smiol ]
         arch:     [ x86_64 ]
