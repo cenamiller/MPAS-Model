@@ -227,7 +227,7 @@ jobs:
             export MPICH_ENABLE_COLL_STATS=1
             export MPICH_DBG=1
             export MPICH_DBG_LEVEL=VERBOSE
-            export MPICH_DBG_FILENAME=mpich.err
+            export MPICH_DBG_FILENAME=mpich_debug.log
           fi
 
           # Use extra_mpi_args to set MPI implementation
@@ -246,7 +246,7 @@ jobs:
             echo "log.atmosphere.0000.out not created"
           fi
 
-      - name: Print log.atmosphere.0000.err
+      - name: Print error and debug logs
         if: always()
         run: |
           # check if log.atmosphere.0000.err exists
@@ -255,6 +255,12 @@ jobs:
           else
             echo "log.atmosphere.0000.err not created"
           fi
+          
+          # Print MPICH debug log if it exists
+          if [ "${{ matrix.debug }}" == 'debug' ] && [ -f 240km_${{ matrix.num_procs }}/mpich_debug.log ]; then
+            echo "=== MPICH Debug Log ==="
+            cat 240km_${{ matrix.num_procs }}/mpich_debug.log
+          fi
 
       - name: Upload log and error and restart files
         if: always()
@@ -262,11 +268,10 @@ jobs:
         with:
           name: mpas_240km_${{ matrix.num_procs }}rank_run_output_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
           path: |
-            240km_${{ matrix.num_procs }}/
-            restart.*
-            *.log
-            *.err
-            *.out
+            240km_${{ matrix.num_procs }}/restart.*
+            240km_${{ matrix.num_procs }}/*.log
+            240km_${{ matrix.num_procs }}/*.err
+            240km_${{ matrix.num_procs }}/*.out
 
   coverage-test:
     strategy:
@@ -350,8 +355,15 @@ jobs:
           fi
           .github/workflows/run_mpas_240km.sh ${{ matrix.num_procs }}
 
+      - name: List contents of 240km_${{ matrix.num_procs }}
+        run: |
+          ls -l 240km_${{ matrix.num_procs }}/*
+
+      - name: List contents of .github/workflows
+        run: |
+          ls -l .github/workflows/*
+
       - name: Generate coverage report
-        if: always()
         run: |
           cd 240km_${{ matrix.num_procs }}
           
