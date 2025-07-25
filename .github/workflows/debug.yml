@@ -1,4 +1,4 @@
-name: Build MPAS-A Inside NCAR HPC Development Containers
+name: Debug MPAS-A Inside NCAR HPC Dev Containers
 
 # This workflow is used to build and run MPAS-A inside NCAR HPC development containers.
 # It's adapted from Ben Kirk's workflows building & testing dev containers with github actions
@@ -24,18 +24,17 @@ on:
 
 jobs:
 
-  build:
+  debug-build:
     strategy:
       fail-fast: false
       matrix:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
         compiler: [ nvhpc, gcc ]
-        mpi:      [ mpich, mpich3 ]
+        mpi:      [ mpich, mpich3, oneapi ]
         #gpu:      [ nogpu, cuda ]
         gpu:      [ nogpu ]
         io:       [ smiol ]
         arch:     [ x86_64 ]
-        debug:    [ debug ]
 
         include:
           - io: smiol
@@ -43,8 +42,6 @@ jobs:
           #- compiler: nvhpc
           #  gpu: cuda
           #  extra_accel_args: 'export OPENACC=true'
-          - debug: debug
-            extra_debug_args: 'export DEBUG=true'
 
 
     name: Build
@@ -100,6 +97,8 @@ jobs:
         run: |
           chmod +x .github/workflows/build_mpas.sh
 
+          export DEBUG=true
+
           # Use extra_io_args to set whether to use PIO or SMIOL
           if [ -n "${{ matrix.extra_io_args }}" ]; then
             eval "${{ matrix.extra_io_args }}"
@@ -117,7 +116,7 @@ jobs:
           name: atmosphere_model-${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
           path: atmosphere_model
   
-  run:
+  debug-run:
 
     # The run-mpas-240km matrix needs to be a subset of the build-mpas matrix
     # at this time
@@ -128,12 +127,11 @@ jobs:
       matrix:
         #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
         compiler: [ nvhpc, gcc ]
-        mpi:      [ mpich, mpich3 ]
+        mpi:      [ mpich, mpich3, oneapi]
         gpu:      [ nogpu ]
         io:       [ smiol ]
         arch:     [ x86_64 ]
         num_procs: [ 1, 4 ]
-        debug:    [ debug ]
 
         include:
           #- mpi: openmpi
@@ -141,7 +139,7 @@ jobs:
           - io: smiol
             extra_io_args: 'unset PIO'
 
-    needs: build
+    needs: debug-build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -205,6 +203,15 @@ jobs:
           export RUN_DURATION="0_06:00:00"
           export RESTART_INTERVAL="0_06:00:00"
 
+          export MPICH_ENABLE_COLL_STATS=1
+          export MPICH_DBG=1
+          export MPICH_DBG_LEVEL=VERBOSE
+          export MPICH_DBG_FILENAME=240km_${{ matrix.num_procs }}/mpich_debug.log
+          echo "MPICH_ENABLE_COLL_STATS: $MPICH_ENABLE_COLL_STATS"
+          echo "MPICH_DBG: $MPICH_DBG"
+          echo "MPICH_DBG_LEVEL: $MPICH_DBG_LEVEL"
+          echo "MPICH_DBG_FILENAME: $MPICH_DBG_FILENAME"
+
           # Use extra_mpi_args to set MPI implementation
           if [ -n "${{ matrix.extra_mpi_args }}" ]; then
             eval "${{ matrix.extra_mpi_args }}"
@@ -230,6 +237,12 @@ jobs:
           else
             echo "log.atmosphere.0000.err not created"
           fi
+          
+          # Print MPICH debug log if it exists
+          if [ -f 240km_${{ matrix.num_procs }}/mpich_debug.log ]; then
+            echo "=== MPICH Debug Log ==="
+            cat 240km_${{ matrix.num_procs }}/mpich_debug.log
+          fi
 
       - name: Upload log and error and restart files
         if: always()
@@ -241,120 +254,3 @@ jobs:
             240km_${{ matrix.num_procs }}/*.log
             240km_${{ matrix.num_procs }}/*.err
             240km_${{ matrix.num_procs }}/*.out
-
-  coverage-test:
-    strategy:
-      fail-fast: false
-      matrix:
-        compiler: [ gcc ]
-        mpi:      [ mpich3 ]
-        gpu:      [ nogpu ]
-        io:       [ smiol ]
-        arch:     [ x86_64 ]
-        num_procs: [ 1 ]
-
-        include:
-          - io: smiol
-            extra_io_args: 'unset PIO'
-
-    needs: build
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -elo pipefail {0}
-
-    container:
-      image: ncarcisl/cisldev-${{ matrix.arch }}-${{ inputs.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}:devel
-    
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install coverage tools
-        run: |
-          # Install lcov for coverage report generation
-          if command -v yum &> /dev/null; then
-            # Try to install lcov from EPEL or build from source
-            yum install -y epel-release || true
-            yum install -y lcov || {
-              echo "lcov not available in repositories, installing from source..."
-              yum install -y gcc-c++ make
-              cd /tmp
-              curl -L -o lcov-1.16.tar.gz https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16.tar.gz
-              tar xzf lcov-1.16.tar.gz
-              cd lcov-1.16
-              make install PREFIX=/usr/local
-              cd /
-            }
-          elif command -v apt-get &> /dev/null; then
-            apt-get update && apt-get install -y lcov
-          else
-            echo "Package manager not found, trying to install lcov manually"
-          fi
-
-      - name: Build MPAS-A with coverage
-        run: |
-          chmod +x .github/workflows/build_mpas.sh
-
-          # Use extra_io_args to set whether to use PIO or SMIOL
-          if [ -n "${{ matrix.extra_io_args }}" ]; then
-            eval "${{ matrix.extra_io_args }}"
-          fi
-
-          # Use extra_accel_args to set whether to use OpenACC
-          if [ -n "${{ matrix.extra_accel_args }}" ]; then
-            eval "${{ matrix.extra_accel_args }}"
-          fi
-          
-          timeout 25m make gfortran CORE=atmosphere --jobs ${MAKE_J_PROCS:-$(nproc)} \
-            "FFLAGS_OPT=${FCFLAGS} -fprofile-arcs -ftest-coverage" \
-            "CFLAGS_OPT=${CFLAGS} -fprofile-arcs -ftest-coverage" \
-            "CXXFLAGS_OPT=${CXXFLAGS} -fprofile-arcs -ftest-coverage" \
-            "LDFLAGS_OPT=${LDFLAGS} -lgcov"
-
-      - name: Run MPAS-A with code coverage test
-        run: |
-          chmod +x .github/workflows/run_mpas_240km.sh
-          export RUN_DURATION="0_01:00:00"
-          export RESTART_INTERVAL="0_01:00:00"
-
-          # Use extra_mpi_args to set MPI implementation
-          if [ -n "${{ matrix.extra_mpi_args }}" ]; then
-            eval "${{ matrix.extra_mpi_args }}"
-          fi
-          .github/workflows/run_mpas_240km.sh ${{ matrix.num_procs }}
-
-      - name: List contents of 240km_${{ matrix.num_procs }}
-        run: |
-          ls -l 240km_${{ matrix.num_procs }}/*
-
-      - name: List contents of .github/workflows
-        run: |
-          ls -l .github/workflows/*
-
-      - name: Generate coverage report
-        run: |
-          cd 240km_${{ matrix.num_procs }}
-          
-          # Check what .gcda files were created
-          echo "Looking for .gcda files:"
-          find . -name "*.gcda" 2>/dev/null || echo "No .gcda files found"
-          
-          # Collect coverage data 
-          lcov --capture --directory . --output-file coverage.info
-          
-          # Generate HTML report
-          genhtml coverage.info --output-directory coverage_report
-          
-          # Generate summary
-          lcov --summary coverage.info
-
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage_report_${{ matrix.compiler }}_${{ matrix.mpi }}_${{ matrix.gpu }}_${{ matrix.io }}
-          path: |
-            240km_${{ matrix.num_procs }}/coverage_report/
-            240km_${{ matrix.num_procs }}/coverage.info
-
-
