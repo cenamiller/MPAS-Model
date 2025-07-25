@@ -227,7 +227,7 @@ jobs:
             export MPICH_ENABLE_COLL_STATS=1
             export MPICH_DBG=1
             export MPICH_DBG_LEVEL=VERBOSE
-            export MPICH_DBG_FILENAME= mpich.err
+            export MPICH_DBG_FILENAME=mpich.err
           fi
 
           # Use extra_mpi_args to set MPI implementation
@@ -239,7 +239,12 @@ jobs:
       - name: Print log.atmosphere.0000.out
         if: always()
         run: |
-          cat 240km_${{ matrix.num_procs }}/log.atmosphere.0000.out
+          #check if log.atmosphere.0000.out exists
+          if [ -f 240km_${{ matrix.num_procs }}/log.atmosphere.0000.out ]; then
+            cat 240km_${{ matrix.num_procs }}/log.atmosphere.0000.out
+          else
+            echo "log.atmosphere.0000.out not created"
+          fi
 
       - name: Print log.atmosphere.0000.err
         if: always()
