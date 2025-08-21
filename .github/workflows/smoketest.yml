@@ -1,4 +1,4 @@
-name: Build MPAS-A Inside NCAR HPC Development Containers
+name: Build & Run 240km Inside NCAR HPC Development Containers
 
 # This workflow is used to build and run MPAS-A inside NCAR HPC development containers.
 # It's adapted from Ben Kirk's workflows building & testing dev containers with github actions
