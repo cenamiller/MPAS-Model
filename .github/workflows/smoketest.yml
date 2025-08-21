@@ -28,23 +28,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
-        compiler: [ nvhpc, gcc ]
-        mpi:      [ mpich, mpich3 ]
-        #gpu:      [ nogpu, cuda ]
-        gpu:      [ nogpu ]
-        io:       [ smiol ]
+        # compiler options:  nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang
+        # mpi options: mpich (mpich4), mpich3, openmpi
+        # gpu options: nogpu, cuda
+        # io ioptions: smiol, pio
+        
+        compiler: [ nvhpc, gcc, oneapi ] 
+        mpi:      [ mpich, mpich3, openmpi ]
+        gpu:      [ nogpu, cuda ]
+        io:       [ smiol, pio ]
         arch:     [ x86_64 ]
-        debug:    [ debug ]
 
         include:
           - io: smiol
             extra_io_args: 'unset PIO'
-          #- compiler: nvhpc
-          #  gpu: cuda
-          #  extra_accel_args: 'export OPENACC=true'
-          - debug: debug
-            extra_debug_args: 'export DEBUG=true'
+          - compiler: nvhpc
+            gpu: cuda
+            extra_accel_args: 'export OPENACC=true'
 
 
     name: Build
@@ -126,18 +126,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        #compiler: [ nvhpc, oneapi, aocc, gcc, gcc12, gcc13, gcc14, clang ]
-        compiler: [ nvhpc, gcc ]
-        mpi:      [ mpich, mpich3 ]
+        compiler: [ nvhpc, gcc, oneapi ]
+        mpi:      [ mpich, mpich3, openmpi ]
         gpu:      [ nogpu ]
-        io:       [ smiol ]
+        io:       [ smiol, pio ]
         arch:     [ x86_64 ]
         num_procs: [ 1, 4 ]
-        debug:    [ debug ]
 
         include:
-          #- mpi: openmpi
-          #  extra_mpi_args: 'export MPI_FLAGS="--allow-run-as-root --oversubscribe"'
+          - mpi: openmpi
+            extra_mpi_args: 'export MPI_FLAGS="--allow-run-as-root --oversubscribe"'
           - io: smiol
             extra_io_args: 'unset PIO'
 
