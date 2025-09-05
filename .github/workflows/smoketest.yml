@@ -147,7 +147,7 @@ jobs:
 
     container:
       #image: ncarcisl/cisldev-${{ matrix.arch }}-${{ inputs.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}:devel
-      image: image: ncarcisl/hpcdev-${{ matrix.arch }}:${{ inputs.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}-latest 
+      image: ncarcisl/hpcdev-${{ matrix.arch }}:${{ inputs.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}${{ matrix.gpu == 'cuda' && '-cuda' || '' }}-latest 
     steps:
       - uses: actions/checkout@v4
 
