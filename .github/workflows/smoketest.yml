@@ -128,7 +128,7 @@ jobs:
       matrix:
         compiler: [ nvhpc, gcc, oneapi ]
         mpi:      [ mpich, mpich3, openmpi ]
-        gpu:      [ nogpu ]
+        gpu:      [ nogpu, cuda ]
         io:       [ smiol, pio ]
         arch:     [ x86_64 ]
         num_procs: [ 1, 4 ]
